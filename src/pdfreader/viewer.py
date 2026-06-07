@@ -34,8 +34,9 @@ class Viewer:
         self.ui_scale = 1.0
 
         root.title("pdfreader")
-        root.geometry("900x1100")
+        root.geometry("900x1100")  # fallback size before maximizing
         root.configure(bg="#1e1e1e")
+        self._maximize(root)
 
         self.canvas = tk.Canvas(root, bg="#3a3a3a", highlightthickness=0)
         self.vbar = tk.Scrollbar(root, orient="vertical", command=self.canvas.yview)
@@ -65,6 +66,21 @@ class Viewer:
 
         self._bind_keys()
         self.canvas.bind("<Configure>", self._on_canvas_configure)
+
+    # ----- setup -------------------------------------------------------
+    @staticmethod
+    def _maximize(root: tk.Tk) -> None:
+        """Open maximized, cross-platform (mirrors the comic viewer)."""
+        try:
+            root.state("zoomed")  # Windows / some Linux WMs
+        except tk.TclError:
+            try:
+                root.attributes("-zoomed", True)  # most Linux WMs
+            except tk.TclError:
+                root.update_idletasks()  # fallback: fill the screen
+                root.geometry(
+                    f"{root.winfo_screenwidth()}x{root.winfo_screenheight()}+0+0"
+                )
 
     # ----- key bindings ------------------------------------------------
     def _bind_keys(self) -> None:

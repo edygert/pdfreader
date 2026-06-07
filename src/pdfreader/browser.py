@@ -27,7 +27,12 @@ class FileBrowser:
         self.win = tk.Toplevel(parent)
         self.win.title("Open PDF")
         self.win.configure(bg="#2b2b2b")
-        self.win.geometry("760x600")
+        # Large, centered: ~70% of the screen so long paths and the bigger font
+        # have room.
+        self.win.update_idletasks()
+        sw, sh = self.win.winfo_screenwidth(), self.win.winfo_screenheight()
+        w, h = int(sw * 0.7), int(sh * 0.75)
+        self.win.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
         self.win.transient(parent)
         self.win.grab_set()
 
