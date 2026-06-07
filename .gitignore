@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual env
+.venv/
+
+# PyInstaller build artifacts (build/pdfreader.spec is source and IS tracked)
+/build_work/
+/dist/
