@@ -32,6 +32,7 @@ class Viewer:
         self._resize_job: str | None = None
         # Currently applied UI text scale (per-file; restored on open_path).
         self.ui_scale = 1.0
+        self._g_pending = False  # first 'g' of a vim 'gg' chord
 
         root.title("pdfreader")
         root.geometry("900x1100")  # fallback size before maximizing
@@ -108,7 +109,11 @@ class Viewer:
     def _bind_keys(self) -> None:
         r = self.root
         r.bind("o", lambda e: self.open_dialog())
-        r.bind("g", lambda e: self.goto_dialog())
+        r.bind("<colon>", lambda e: self.goto_dialog())  # vim :NN
+        # gg → first page, G → last page (vim). 'g' is a prefix: a lone g waits
+        # briefly for a second g.
+        r.bind("g", lambda e: self._on_g_key())
+        r.bind("G", lambda e: self.last_page())
 
         # Paging: Ctrl-f/Ctrl-b (vim page fwd/back), plus Space/PageDown/PageUp.
         for key in ("<Control-f>", "<space>", "<Next>"):
@@ -122,8 +127,8 @@ class Viewer:
             r.bind(key, lambda e: self.zoom_in())
         for key in ("<minus>", "<KP_Subtract>"):
             r.bind(key, lambda e: self.zoom_out())
-        r.bind("w", lambda e: self.fit_width())
-        r.bind("h", lambda e: self.fit_height())
+        r.bind("W", lambda e: self.fit_width())   # Shift+W (h/l are vim pan)
+        r.bind("H", lambda e: self.fit_height())  # Shift+H
         r.bind("f", lambda e: self.custom_scale_dialog())
 
         # Pan the page: arrows and vim j/k (down/up). Ctrl+Left/Right also page.
@@ -131,8 +136,10 @@ class Viewer:
         r.bind("<Right>", lambda e: self.canvas.xview_scroll(1, "units"))
         r.bind("<Up>", lambda e: self.canvas.yview_scroll(-1, "units"))
         r.bind("<Down>", lambda e: self.canvas.yview_scroll(1, "units"))
+        r.bind("h", lambda e: self.canvas.xview_scroll(-1, "units"))
         r.bind("j", lambda e: self.canvas.yview_scroll(1, "units"))
         r.bind("k", lambda e: self.canvas.yview_scroll(-1, "units"))
+        r.bind("l", lambda e: self.canvas.xview_scroll(1, "units"))
         r.bind("<Control-Right>", lambda e: self.next_page())
         r.bind("<Control-Left>", lambda e: self.prev_page())
 
@@ -206,6 +213,18 @@ class Viewer:
 
     def first_page(self) -> None:
         self._goto(0)
+
+    def _on_g_key(self) -> None:
+        """vim 'gg': the second 'g' within the timeout jumps to the first page."""
+        if self._g_pending:
+            self._g_pending = False
+            self.first_page()
+        else:
+            self._g_pending = True
+            self.root.after(600, self._clear_g_pending)
+
+    def _clear_g_pending(self) -> None:
+        self._g_pending = False
 
     def last_page(self) -> None:
         if self.doc:

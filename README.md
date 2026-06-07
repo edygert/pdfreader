@@ -21,18 +21,17 @@ uv run python -m pdfreader file.pdf  # open a specific file
 | Action            | Keys                     |
 | ----------------- | ------------------------ |
 | Open file         | `o`                      |
-| Go to page        | `g`                      |
-| Next page         | `Ctrl →`, `Space`, `PageDown`, `j` |
-| Previous page     | `Ctrl ←`, `PageUp`, `k`  |
-| First page        | `Home`                   |
-| Last page         | `End`                    |
-| Zoom in           | `+` / `=`                |
-| Zoom out          | `-`                      |
-| Fit to width      | `w`                      |
-| Fit to height     | `h`                      |
+| Go to page        | `:`                      |
+| Next page         | `Ctrl f`, `Ctrl →`, `Space`, `PageDown` |
+| Previous page     | `Ctrl b`, `Ctrl ←`, `PageUp` |
+| First page        | `gg`, `Home`             |
+| Last page         | `G`, `End`               |
+| Zoom page in/out  | `+` / `=` , `-`          |
+| Fit to width      | `Shift W`                |
+| Fit to height     | `Shift H`                |
 | Custom scale (%)  | `f`                      |
 | UI text size      | `Ctrl +` / `Ctrl -` / `Ctrl 0` |
-| Pan the page      | Arrow keys               |
+| Pan the page      | `h` `j` `k` `l`, Arrow keys |
 | Help              | `?` / `F1`               |
 | Quit              | `q`                      |
 

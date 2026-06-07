@@ -15,26 +15,26 @@ class Shortcut:
 # Single source of truth: the viewer binds these and the help window lists them.
 SHORTCUTS: list[Shortcut] = [
     Shortcut("Open file", ["o"]),
-    Shortcut("Go to page", ["g"]),
+    Shortcut("Go to page", [":"]),
     Shortcut("Next page", ["Ctrl f", "Ctrl →", "Space", "PageDown"]),
     Shortcut("Previous page", ["Ctrl b", "Ctrl ←", "PageUp"]),
-    Shortcut("First page", ["Home"]),
-    Shortcut("Last page", ["End"]),
+    Shortcut("First page", ["gg", "Home"]),
+    Shortcut("Last page", ["G", "End"]),
     Shortcut("Zoom in", ["+", "="]),
     Shortcut("Zoom out", ["-"]),
-    Shortcut("Fit to width", ["w"]),
-    Shortcut("Fit to height", ["h"]),
+    Shortcut("Fit to width", ["Shift W"]),
+    Shortcut("Fit to height", ["Shift H"]),
     Shortcut("Custom scale (enter %)", ["f"]),
     Shortcut("UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]),
-    Shortcut("Pan (when zoomed)", ["← → ↑ ↓", "j", "k"]),
+    Shortcut("Pan (when zoomed)", ["h j k l", "← → ↑ ↓"]),
     Shortcut("Show this help", ["?", "F1"]),
     Shortcut("Quit", ["q"]),
 ]
 
 # Abbreviated one-line cheat sheet shown along the bottom of the window.
 CHEATS = (
-    "o open · g goto · Ctrl-f/b page · arrows/jk pan · "
-    "w/h fit · f scale · +/- zoom · Ctrl +/- text · ? help · q quit"
+    "o open · : goto · Ctrl-f/b page · gg/G first/last · hjkl pan · "
+    "W/H fit · f scale · +/- zoom · Ctrl +/- text · ? help · q quit"
 )
 
 
