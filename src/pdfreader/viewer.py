@@ -12,7 +12,7 @@ from . import fonts
 from . import state as state_mod
 from .browser import FileBrowser
 from .document import Document
-from .help import show_help
+from .help import CHEATS, show_help
 from .state import CUSTOM, FIT_HEIGHT, FIT_WIDTH, FileState, State
 
 _MARGIN = 4  # px shaved off the viewport so fit modes avoid a stray scrollbar
@@ -61,7 +61,7 @@ class Viewer:
             text="Press  o  to open a PDF   ·   ?  for help",
             font="UiTitle",
         )
-        self._set_status("No document open")
+        self._set_status(f"No document open        {CHEATS}")
 
         self._bind_keys()
         self.canvas.bind("<Configure>", self._on_canvas_configure)
@@ -255,7 +255,7 @@ class Viewer:
 
     def _update_status(self) -> None:
         if not self.doc:
-            self._set_status("No document open")
+            self._set_status(f"No document open        {CHEATS}")
             return
         percent = round(self._effective_scale() * 100)
         mode = self.fstate.scale_mode
@@ -267,6 +267,7 @@ class Viewer:
             scale_text = f"{percent}%"
         self._set_status(
             f"Page {self.page + 1} / {self.doc.page_count}    ·    {scale_text}"
+            f"        {CHEATS}"
         )
 
     def _set_status(self, text: str) -> None:

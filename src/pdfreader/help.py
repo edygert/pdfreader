@@ -31,6 +31,12 @@ SHORTCUTS: list[Shortcut] = [
     Shortcut("Quit", ["q"]),
 ]
 
+# Abbreviated one-line cheat sheet shown along the bottom of the window.
+CHEATS = (
+    "o open · g goto · Space/PgDn next · PgUp prev · "
+    "w/h fit · f scale · +/- zoom · Ctrl +/- text · ? help · q quit"
+)
+
 
 def show_help(parent: tk.Misc) -> None:
     """Open a simple modal window listing every shortcut."""
