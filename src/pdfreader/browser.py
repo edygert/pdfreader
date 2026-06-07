@@ -33,7 +33,7 @@ class FileBrowser:
 
         self.path_label = tk.Label(
             self.win, bg="#1e1e1e", fg="#bbbbbb", anchor="w", padx=8, pady=4,
-            font="UiSmall",
+            font="DialogSmall",
         )
         self.path_label.pack(fill="x")
 
@@ -48,7 +48,7 @@ class FileBrowser:
             highlightthickness=0,
             activestyle="none",
             yscrollcommand=scrollbar.set,
-            font="UiFont",
+            font="DialogFont",
         )
         scrollbar.config(command=self.listbox.yview)
         scrollbar.pack(side="right", fill="y")
@@ -59,7 +59,7 @@ class FileBrowser:
             text="Enter / double-click: open · Backspace: up · Esc: cancel",
             bg="#2b2b2b",
             fg="#888888",
-            font="UiSmall",
+            font="DialogSmall",
         ).pack(pady=(0, 8))
 
         self.listbox.bind("<Double-Button-1>", lambda e: self._activate())

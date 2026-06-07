@@ -87,11 +87,11 @@ class Viewer:
         r.bind("h", lambda e: self.fit_height())
         r.bind("f", lambda e: self.custom_scale_dialog())
 
-        # Arrow keys pan the page (canvas scroll), never flip pages.
+        # Left/Right flip pages; Up/Down pan the page vertically (canvas scroll).
+        r.bind("<Right>", lambda e: self.next_page())
+        r.bind("<Left>", lambda e: self.prev_page())
         r.bind("<Up>", lambda e: self.canvas.yview_scroll(-1, "units"))
         r.bind("<Down>", lambda e: self.canvas.yview_scroll(1, "units"))
-        r.bind("<Left>", lambda e: self.canvas.xview_scroll(-1, "units"))
-        r.bind("<Right>", lambda e: self.canvas.xview_scroll(1, "units"))
         # Mouse wheel vertical scroll (Linux sends Button-4/5).
         self.canvas.bind("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))
         self.canvas.bind("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))

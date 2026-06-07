@@ -11,12 +11,18 @@ from __future__ import annotations
 import tkinter.font as tkfont
 
 # Custom named fonts and their readable base sizes (at scale 1.0).
+# Dialog* fonts are 1.5x the Ui* sizes, used by the file browser and help
+# windows so their text is larger than the status-line chrome.
 _CUSTOM: dict[str, dict] = {
     "UiFont": {"size": 12, "weight": "normal"},
     "UiBold": {"size": 12, "weight": "bold"},
     "UiMono": {"size": 11, "weight": "normal", "family": "TkFixedFont"},
     "UiTitle": {"size": 15, "weight": "bold"},
     "UiSmall": {"size": 10, "weight": "normal"},
+    "DialogFont": {"size": 18, "weight": "normal"},
+    "DialogSmall": {"size": 15, "weight": "normal"},
+    "DialogTitle": {"size": 23, "weight": "bold"},
+    "DialogMono": {"size": 17, "weight": "normal", "family": "TkFixedFont"},
 }
 
 # Standard Tk fonts to scale too, so simpledialog and any default-font widget

@@ -16,8 +16,8 @@ class Shortcut:
 SHORTCUTS: list[Shortcut] = [
     Shortcut("Open file", ["o"]),
     Shortcut("Go to page", ["g"]),
-    Shortcut("Next page", ["Space", "PageDown", "j"]),
-    Shortcut("Previous page", ["PageUp", "k"]),
+    Shortcut("Next page", ["→", "Space", "PageDown", "j"]),
+    Shortcut("Previous page", ["←", "PageUp", "k"]),
     Shortcut("First page", ["Home"]),
     Shortcut("Last page", ["End"]),
     Shortcut("Zoom in", ["+", "="]),
@@ -26,14 +26,14 @@ SHORTCUTS: list[Shortcut] = [
     Shortcut("Fit to height", ["h"]),
     Shortcut("Custom scale (enter %)", ["f"]),
     Shortcut("UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]),
-    Shortcut("Pan (when zoomed)", ["Arrow keys"]),
+    Shortcut("Pan (when zoomed)", ["↑", "↓"]),
     Shortcut("Show this help", ["?", "F1"]),
     Shortcut("Quit", ["q"]),
 ]
 
 # Abbreviated one-line cheat sheet shown along the bottom of the window.
 CHEATS = (
-    "o open · g goto · Space/PgDn next · PgUp prev · "
+    "o open · g goto · →/Space next · ←/PgUp prev · "
     "w/h fit · f scale · +/- zoom · Ctrl +/- text · ? help · q quit"
 )
 
@@ -44,14 +44,15 @@ def show_help(parent: tk.Misc) -> None:
     win.title("Keyboard Shortcuts")
     win.configure(bg="#2b2b2b")
     win.transient(parent)
-    win.geometry("420x460")
+    # No fixed geometry: let Tk size the window to fit the title, every row, and
+    # the Close button, so nothing is clipped at any font scale.
 
     tk.Label(
         win,
         text="Keyboard Shortcuts",
         bg="#2b2b2b",
         fg="#ffffff",
-        font="UiTitle",
+        font="DialogTitle",
     ).pack(anchor="w", padx=16, pady=(14, 8))
 
     grid = tk.Frame(win, bg="#2b2b2b")
@@ -62,12 +63,12 @@ def show_help(parent: tk.Misc) -> None:
             text="   /   ".join(sc.keys),
             bg="#2b2b2b",
             fg="#7fd1ff",
-            font="UiMono",
+            font="DialogMono",
             anchor="w",
         ).grid(row=row, column=0, sticky="w", pady=2, padx=(0, 16))
         tk.Label(
             grid, text=sc.label, bg="#2b2b2b", fg="#dddddd", anchor="w",
-            font="UiFont",
+            font="DialogFont",
         ).grid(row=row, column=1, sticky="w", pady=2)
 
     tk.Button(win, text="Close", command=win.destroy).pack(pady=12)
