@@ -16,8 +16,8 @@ class Shortcut:
 SHORTCUTS: list[Shortcut] = [
     Shortcut("Open file", ["o"]),
     Shortcut("Go to page", ["g"]),
-    Shortcut("Next page", ["→", "Space", "PageDown", "j"]),
-    Shortcut("Previous page", ["←", "PageUp", "k"]),
+    Shortcut("Next page", ["Ctrl →", "Space", "PageDown", "j"]),
+    Shortcut("Previous page", ["Ctrl ←", "PageUp", "k"]),
     Shortcut("First page", ["Home"]),
     Shortcut("Last page", ["End"]),
     Shortcut("Zoom in", ["+", "="]),
@@ -26,14 +26,14 @@ SHORTCUTS: list[Shortcut] = [
     Shortcut("Fit to height", ["h"]),
     Shortcut("Custom scale (enter %)", ["f"]),
     Shortcut("UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]),
-    Shortcut("Pan (when zoomed)", ["↑", "↓"]),
+    Shortcut("Pan (when zoomed)", ["← → ↑ ↓"]),
     Shortcut("Show this help", ["?", "F1"]),
     Shortcut("Quit", ["q"]),
 ]
 
 # Abbreviated one-line cheat sheet shown along the bottom of the window.
 CHEATS = (
-    "o open · g goto · →/Space next · ←/PgUp prev · "
+    "o open · g goto · Space/Ctrl→ next · Ctrl← prev · arrows pan · "
     "w/h fit · f scale · +/- zoom · Ctrl +/- text · ? help · q quit"
 )
 

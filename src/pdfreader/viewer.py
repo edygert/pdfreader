@@ -82,6 +82,17 @@ class Viewer:
                     f"{root.winfo_screenwidth()}x{root.winfo_screenheight()}+0+0"
                 )
 
+    def _on_wheel_button(self, event) -> None:
+        """X11 wheel: 4/5 scroll vertically, 6/7 horizontally."""
+        if event.num == 4:
+            self.canvas.yview_scroll(-1, "units")
+        elif event.num == 5:
+            self.canvas.yview_scroll(1, "units")
+        elif event.num == 6:
+            self.canvas.xview_scroll(-1, "units")
+        elif event.num == 7:
+            self.canvas.xview_scroll(1, "units")
+
     # ----- key bindings ------------------------------------------------
     def _bind_keys(self) -> None:
         r = self.root
@@ -103,17 +114,25 @@ class Viewer:
         r.bind("h", lambda e: self.fit_height())
         r.bind("f", lambda e: self.custom_scale_dialog())
 
-        # Left/Right flip pages; Up/Down pan the page vertically (canvas scroll).
-        r.bind("<Right>", lambda e: self.next_page())
-        r.bind("<Left>", lambda e: self.prev_page())
+        # Arrow keys pan the page; Ctrl+Left/Right flip pages.
+        r.bind("<Left>", lambda e: self.canvas.xview_scroll(-1, "units"))
+        r.bind("<Right>", lambda e: self.canvas.xview_scroll(1, "units"))
         r.bind("<Up>", lambda e: self.canvas.yview_scroll(-1, "units"))
         r.bind("<Down>", lambda e: self.canvas.yview_scroll(1, "units"))
-        # Mouse wheel vertical scroll (Linux sends Button-4/5).
-        self.canvas.bind("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))
-        self.canvas.bind("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))
+        r.bind("<Control-Right>", lambda e: self.next_page())
+        r.bind("<Control-Left>", lambda e: self.prev_page())
+
+        # Touchpad / mouse wheel. On X11 the wheel is buttons 4/5 (vertical) and
+        # 6/7 (horizontal), but some Tk builds reject <Button-6/7> in bind(), so
+        # dispatch all wheel buttons through one generic ButtonPress handler.
+        self.canvas.bind("<ButtonPress>", self._on_wheel_button)
         self.canvas.bind(
-            "<MouseWheel>",
+            "<MouseWheel>",  # Windows/macOS vertical
             lambda e: self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units"),
+        )
+        self.canvas.bind(
+            "<Shift-MouseWheel>",  # Windows/macOS horizontal
+            lambda e: self.canvas.xview_scroll(-1 if e.delta > 0 else 1, "units"),
         )
 
         # UI text scaling (chrome only, separate from page zoom +/-/=).

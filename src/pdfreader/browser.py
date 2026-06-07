@@ -30,26 +30,17 @@ class FileBrowser:
         self.win = tk.Toplevel(parent)
         self.win.title("Open PDF")
         self.win.configure(bg="#2b2b2b")
-        # ~70% of the screen, centered over the app window (which excludes the
-        # ChromeOS shelf, so it looks properly centred).
-        self.win.update_idletasks()
-        parent.update_idletasks()
-        sw, sh = self.win.winfo_screenwidth(), self.win.winfo_screenheight()
-        w, h = int(sw * 0.7), int(sh * 0.75)
-        try:
-            px, py = parent.winfo_rootx(), parent.winfo_rooty()
-            pw, ph = parent.winfo_width(), parent.winfo_height()
-        except (AttributeError, tk.TclError):
-            px, py, pw, ph = 0, 0, sw, sh
-        x = max(0, px + (pw - w) // 2)
-        y = max(0, py + (ph - h) // 2)
-        self.win.geometry(f"{w}x{h}+{x}+{y}")
+        # No geometry: let Tk size the window to its content (the listbox's
+        # requested rows/columns below). ChromeOS/Sommelier centers windows that
+        # request no position — the same reason the help window lands centered.
         self.win.transient(parent)
         self.win.grab_set()
 
         self.path_label = tk.Label(
             self.win, bg="#1e1e1e", fg="#bbbbbb", anchor="w", padx=8, pady=4,
-            font="DialogSmall",
+            font="DialogSmall", justify="left",
+            # Wrap long paths instead of widening the window past the listbox.
+            wraplength=900,
         )
         self.path_label.pack(fill="x")
 
@@ -65,6 +56,8 @@ class FileBrowser:
             activestyle="none",
             yscrollcommand=scrollbar.set,
             font="DialogFont",
+            width=60,   # columns — drives the auto-sized window width
+            height=24,  # rows
         )
         scrollbar.config(command=self.listbox.yview)
         scrollbar.pack(side="right", fill="y")

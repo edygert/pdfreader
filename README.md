@@ -22,8 +22,8 @@ uv run python -m pdfreader file.pdf  # open a specific file
 | ----------------- | ------------------------ |
 | Open file         | `o`                      |
 | Go to page        | `g`                      |
-| Next page         | `Space`, `PageDown`, `j` |
-| Previous page     | `PageUp`, `k`            |
+| Next page         | `Ctrl →`, `Space`, `PageDown`, `j` |
+| Previous page     | `Ctrl ←`, `PageUp`, `k`  |
 | First page        | `Home`                   |
 | Last page         | `End`                    |
 | Zoom in           | `+` / `=`                |
