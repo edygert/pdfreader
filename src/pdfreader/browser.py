@@ -11,6 +11,9 @@ from __future__ import annotations
 import tkinter as tk
 from pathlib import Path
 
+# Left margin before each entry (replaces the old icon column).
+_INDENT = "   "
+
 
 class FileBrowser:
     """Modal directory navigator that returns the chosen ``.pdf`` path."""
@@ -27,12 +30,20 @@ class FileBrowser:
         self.win = tk.Toplevel(parent)
         self.win.title("Open PDF")
         self.win.configure(bg="#2b2b2b")
-        # Large, centered: ~70% of the screen so long paths and the bigger font
-        # have room.
+        # ~70% of the screen, centered over the app window (which excludes the
+        # ChromeOS shelf, so it looks properly centred).
         self.win.update_idletasks()
+        parent.update_idletasks()
         sw, sh = self.win.winfo_screenwidth(), self.win.winfo_screenheight()
         w, h = int(sw * 0.7), int(sh * 0.75)
-        self.win.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+        try:
+            px, py = parent.winfo_rootx(), parent.winfo_rooty()
+            pw, ph = parent.winfo_width(), parent.winfo_height()
+        except (AttributeError, tk.TclError):
+            px, py, pw, ph = 0, 0, sw, sh
+        x = max(0, px + (pw - w) // 2)
+        y = max(0, py + (ph - h) // 2)
+        self.win.geometry(f"{w}x{h}+{x}+{y}")
         self.win.transient(parent)
         self.win.grab_set()
 
@@ -106,15 +117,17 @@ class FileBrowser:
             key=lambda p: p.name.lower(),
         )
 
+        # Left margin (no icons); folders carry a trailing slash to set them
+        # apart from files.
         parent = self.current_dir.parent
         if parent != self.current_dir:
-            self.listbox.insert(tk.END, "📁  ..")
+            self.listbox.insert(tk.END, f"{_INDENT}../")
             self._entries.append(parent)
         for d in dirs:
-            self.listbox.insert(tk.END, f"📁  {d.name}")
+            self.listbox.insert(tk.END, f"{_INDENT}{d.name}/")
             self._entries.append(d)
         for f in pdfs:
-            self.listbox.insert(tk.END, f"📄  {f.name}")
+            self.listbox.insert(tk.END, f"{_INDENT}{f.name}")
             self._entries.append(f)
 
     def _activate(self) -> None:
