@@ -83,11 +83,22 @@ class Viewer:
                 )
 
     def _on_wheel_button(self, event) -> None:
-        """X11 wheel: 4/5 scroll vertically, 6/7 horizontally."""
+        """X11 wheel buttons.
+
+        Buttons 4/5 are the vertical wheel; ChromeOS/Sommelier delivers a
+        horizontal swipe as the same 4/5 *with Shift held* (state bit 0x1), so
+        treat shifted 4/5 as horizontal. Buttons 6/7 (true horizontal wheel) are
+        also handled where the platform delivers them.
+        """
+        shift = event.state & 0x0001
         if event.num == 4:
-            self.canvas.yview_scroll(-1, "units")
+            (self.canvas.xview_scroll if shift else self.canvas.yview_scroll)(
+                -1, "units"
+            )
         elif event.num == 5:
-            self.canvas.yview_scroll(1, "units")
+            (self.canvas.xview_scroll if shift else self.canvas.yview_scroll)(
+                1, "units"
+            )
         elif event.num == 6:
             self.canvas.xview_scroll(-1, "units")
         elif event.num == 7:
