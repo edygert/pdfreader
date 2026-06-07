@@ -311,9 +311,10 @@ class Viewer:
             scale_text = f"Fit height ({percent}%)"
         else:
             scale_text = f"{percent}%"
+        name = Path(self.doc.path).name
         self._set_status(
-            f"Page {self.page + 1} / {self.doc.page_count}    ·    {scale_text}"
-            f"        {CHEATS}"
+            f"{name}    ·    Page {self.page + 1} / {self.doc.page_count}"
+            f"    ·    {scale_text}        {CHEATS}"
         )
 
     def _set_status(self, text: str) -> None:
