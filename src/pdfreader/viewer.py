@@ -110,9 +110,10 @@ class Viewer:
         r.bind("o", lambda e: self.open_dialog())
         r.bind("g", lambda e: self.goto_dialog())
 
-        for key in ("<space>", "<Next>", "j"):
+        # Paging: Ctrl-f/Ctrl-b (vim page fwd/back), plus Space/PageDown/PageUp.
+        for key in ("<Control-f>", "<space>", "<Next>"):
             r.bind(key, lambda e: self.next_page())
-        for key in ("<Prior>", "k"):
+        for key in ("<Control-b>", "<Prior>"):
             r.bind(key, lambda e: self.prev_page())
         r.bind("<Home>", lambda e: self.first_page())
         r.bind("<End>", lambda e: self.last_page())
@@ -125,11 +126,13 @@ class Viewer:
         r.bind("h", lambda e: self.fit_height())
         r.bind("f", lambda e: self.custom_scale_dialog())
 
-        # Arrow keys pan the page; Ctrl+Left/Right flip pages.
+        # Pan the page: arrows and vim j/k (down/up). Ctrl+Left/Right also page.
         r.bind("<Left>", lambda e: self.canvas.xview_scroll(-1, "units"))
         r.bind("<Right>", lambda e: self.canvas.xview_scroll(1, "units"))
         r.bind("<Up>", lambda e: self.canvas.yview_scroll(-1, "units"))
         r.bind("<Down>", lambda e: self.canvas.yview_scroll(1, "units"))
+        r.bind("j", lambda e: self.canvas.yview_scroll(1, "units"))
+        r.bind("k", lambda e: self.canvas.yview_scroll(-1, "units"))
         r.bind("<Control-Right>", lambda e: self.next_page())
         r.bind("<Control-Left>", lambda e: self.prev_page())
 
