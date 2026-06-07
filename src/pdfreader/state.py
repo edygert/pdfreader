@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-
-from PySide6.QtCore import QStandardPaths
 
 # Scale modes persisted in state and used by the viewer.
 FIT_WIDTH = "fit_width"
@@ -25,6 +25,7 @@ class FileState:
     page: int = 0
     scale_mode: str = FIT_WIDTH
     custom_factor: float = 1.0
+    ui_scale: float = 1.0  # chrome/text size for this file (page scale is separate)
 
 
 @dataclass
@@ -43,14 +44,19 @@ class State:
         return record
 
 
+def _config_dir() -> Path:
+    """Platform-appropriate per-user config directory for the app."""
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming")
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:  # Linux / Crostian / other Unix
+        base = os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")
+    return Path(base) / "pdfreader"
+
+
 def _state_path() -> Path:
-    # GenericConfigLocation is the bare config root (~/.config, %APPDATA%,
-    # ~/Library/Preferences) — we add a single "pdfreader" segment so the path
-    # is stable regardless of the app/org names set on QApplication.
-    base = QStandardPaths.writableLocation(
-        QStandardPaths.StandardLocation.GenericConfigLocation
-    )
-    return Path(base) / "pdfreader" / "state.json"
+    return _config_dir() / "state.json"
 
 
 def load() -> State:
@@ -67,6 +73,7 @@ def load() -> State:
                 page=int(rec.get("page", 0)),
                 scale_mode=rec.get("scale_mode", FIT_WIDTH),
                 custom_factor=float(rec.get("custom_factor", 1.0)),
+                ui_scale=float(rec.get("ui_scale", 1.0)),
             )
         except (ValueError, AttributeError):
             continue

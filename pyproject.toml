@@ -5,9 +5,8 @@ description = "A fast, minimal, keyboard-driven standalone PDF reader"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pyside6>=6.8",
     "pypdfium2>=4.30",
-    "numpy>=2.1",
+    "pillow>=10.0",
 ]
 
 [project.scripts]

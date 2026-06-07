@@ -1,15 +1,15 @@
-"""Application entry point: bootstrap Qt, parse args, restore last session."""
+"""Application entry point: build the Tk root, parse args, restore last session."""
 
 from __future__ import annotations
 
 import argparse
 import sys
+import tkinter as tk
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
-
+from . import fonts
 from . import state as state_mod
-from .viewer import MainWindow
+from .viewer import Viewer
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -23,21 +23,25 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
 
-    app = QApplication(sys.argv)
-    app.setOrganizationName("pdfreader")
-    app.setApplicationName("pdfreader")
-
     state = state_mod.load()
-    window = MainWindow(state)
-    window.show()
+    root = tk.Tk()
+    # Create the scalable named fonts before any widget references them; the
+    # per-file text scale is applied later when a file opens.
+    fonts.init_fonts(root)
+    fonts.apply_scale(1.0)
+    viewer = Viewer(root, state)
 
-    # open_path always restores the target file's own saved page and scale.
-    if args.file:
-        window.open_path(args.file)
-    elif state.last_file and Path(state.last_file).is_file():
-        window.open_path(state.last_file)
+    # Render once the window has a real size; open_path/_render needs it.
+    def _startup() -> None:
+        if args.file:
+            viewer.open_path(args.file)
+        elif state.last_file and Path(state.last_file).is_file():
+            # Auto-restore the previous file at its saved page and scale.
+            viewer.open_path(state.last_file)
 
-    return app.exec()
+    root.after(50, _startup)
+    root.mainloop()
+    return 0
 
 
 if __name__ == "__main__":

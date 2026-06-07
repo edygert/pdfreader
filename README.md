@@ -1,7 +1,12 @@
 # pdfreader
 
 A fast, minimal, keyboard-driven PDF reader. Single-page view, instant scaling,
-remembers where you left off. Built with PySide6 + pypdfium2.
+remembers where you left off. Built with Tkinter + Pillow + pypdfium2.
+
+Tkinter renders over X11/XWayland, which keeps it stable on ChromeOS (Crostini),
+where the Sommelier Wayland proxy mishandles native dialogs and extra surfaces.
+File opening uses a built-in in-window browser, not a native file dialog, for the
+same reason.
 
 ## Run (development)
 
@@ -13,23 +18,25 @@ uv run python -m pdfreader file.pdf  # open a specific file
 
 ## Keyboard shortcuts
 
-| Action            | Vim-like        | Conventional        |
-| ----------------- | --------------- | ------------------- |
-| Open file         | `O`             | `Ctrl+O`            |
-| Go to page        | `G`             | `Ctrl+G`            |
-| Next page         | `J`, `Space`    | `PgDown`            |
-| Previous page     | `K`, `⇧Space`   | `PgUp`              |
-| First page        | `Home`          | `Ctrl+Home`         |
-| Last page         | `End`           | `Ctrl+End`          |
-| Zoom in           | `+` / `=`       | `Ctrl++`            |
-| Zoom out          | `-`             | `Ctrl+-`            |
-| Fit to width      | `W`             | View menu           |
-| Fit to height     | `H`             | View menu           |
-| Custom scale (%)  | `F`             | View menu           |
-| Help              | `?`             | `F1`                |
-| Quit              | `Q`             | `Ctrl+Q`            |
+| Action            | Keys                     |
+| ----------------- | ------------------------ |
+| Open file         | `o`                      |
+| Go to page        | `g`                      |
+| Next page         | `Space`, `PageDown`, `j` |
+| Previous page     | `PageUp`, `k`            |
+| First page        | `Home`                   |
+| Last page         | `End`                    |
+| Zoom in           | `+` / `=`                |
+| Zoom out          | `-`                      |
+| Fit to width      | `w`                      |
+| Fit to height     | `h`                      |
+| Custom scale (%)  | `f`                      |
+| UI text size      | `Ctrl +` / `Ctrl -` / `Ctrl 0` |
+| Pan the page      | Arrow keys               |
+| Help              | `?` / `F1`               |
+| Quit              | `q`                      |
 
-Arrow keys pan the page when it is zoomed larger than the window.
+Press `?` or `F1` in the app for the same list.
 
 ## Session memory
 

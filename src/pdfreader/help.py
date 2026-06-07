@@ -1,95 +1,71 @@
-"""Canonical shortcut definitions and the help dialog.
-
-This module is the single source of truth for keybindings: ``viewer.py`` reads
-``SHORTCUTS`` to register the actual ``QShortcut`` objects, and the help dialog
-renders the same list — so the documented keys can never drift from behaviour.
-"""
+"""Canonical shortcut definitions and the help window."""
 
 from __future__ import annotations
 
+import tkinter as tk
 from dataclasses import dataclass, field
-
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (
-    QDialog,
-    QDialogButtonBox,
-    QLabel,
-    QScrollArea,
-    QVBoxLayout,
-    QWidget,
-)
 
 
 @dataclass(frozen=True)
 class Shortcut:
-    """One logical action and every key sequence that triggers it.
-
-    ``action`` is the identifier the viewer maps to a handler method.
-    ``keys`` are Qt key-sequence strings (e.g. ``"Ctrl+O"``, ``"PgDown"``).
-    """
-
-    action: str
     label: str
     keys: list[str] = field(default_factory=list)
 
 
-# Order here is also the order shown in the help dialog.
+# Single source of truth: the viewer binds these and the help window lists them.
 SHORTCUTS: list[Shortcut] = [
-    Shortcut("open", "Open file", ["O", "Ctrl+O"]),
-    Shortcut("goto", "Go to page", ["G", "Ctrl+G"]),
-    Shortcut("next", "Next page", ["J", "Space", "PgDown"]),
-    Shortcut("prev", "Previous page", ["K", "Shift+Space", "PgUp"]),
-    Shortcut("first", "First page", ["Home", "Ctrl+Home"]),
-    Shortcut("last", "Last page", ["End", "Ctrl+End"]),
-    Shortcut("zoom_in", "Zoom in", ["+", "=", "Ctrl++"]),
-    Shortcut("zoom_out", "Zoom out", ["-", "Ctrl+-"]),
-    Shortcut("fit_width", "Fit to width", ["W"]),
-    Shortcut("fit_height", "Fit to height", ["H"]),
-    Shortcut("custom_scale", "Custom scale (enter %)", ["F"]),
-    Shortcut("help", "Show this help", ["?", "F1"]),
-    Shortcut("quit", "Quit", ["Q", "Ctrl+Q"]),
+    Shortcut("Open file", ["o"]),
+    Shortcut("Go to page", ["g"]),
+    Shortcut("Next page", ["Space", "PageDown", "j"]),
+    Shortcut("Previous page", ["PageUp", "k"]),
+    Shortcut("First page", ["Home"]),
+    Shortcut("Last page", ["End"]),
+    Shortcut("Zoom in", ["+", "="]),
+    Shortcut("Zoom out", ["-"]),
+    Shortcut("Fit to width", ["w"]),
+    Shortcut("Fit to height", ["h"]),
+    Shortcut("Custom scale (enter %)", ["f"]),
+    Shortcut("UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]),
+    Shortcut("Pan (when zoomed)", ["Arrow keys"]),
+    Shortcut("Show this help", ["?", "F1"]),
+    Shortcut("Quit", ["q"]),
 ]
 
 
-def _format_keys(keys: list[str]) -> str:
-    return "  /  ".join(keys)
+def show_help(parent: tk.Misc) -> None:
+    """Open a simple modal window listing every shortcut."""
+    win = tk.Toplevel(parent)
+    win.title("Keyboard Shortcuts")
+    win.configure(bg="#2b2b2b")
+    win.transient(parent)
+    win.geometry("420x460")
 
+    tk.Label(
+        win,
+        text="Keyboard Shortcuts",
+        bg="#2b2b2b",
+        fg="#ffffff",
+        font="UiTitle",
+    ).pack(anchor="w", padx=16, pady=(14, 8))
 
-class HelpDialog(QDialog):
-    """A simple scrollable list of all shortcuts."""
+    grid = tk.Frame(win, bg="#2b2b2b")
+    grid.pack(fill="both", expand=True, padx=16)
+    for row, sc in enumerate(SHORTCUTS):
+        tk.Label(
+            grid,
+            text="   /   ".join(sc.keys),
+            bg="#2b2b2b",
+            fg="#7fd1ff",
+            font="UiMono",
+            anchor="w",
+        ).grid(row=row, column=0, sticky="w", pady=2, padx=(0, 16))
+        tk.Label(
+            grid, text=sc.label, bg="#2b2b2b", fg="#dddddd", anchor="w",
+            font="UiFont",
+        ).grid(row=row, column=1, sticky="w", pady=2)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("Keyboard Shortcuts")
-        self.setMinimumSize(420, 480)
+    tk.Button(win, text="Close", command=win.destroy).pack(pady=12)
 
-        rows = ["<table cellspacing='8'>"]
-        rows.append(
-            "<tr><th align='left'>Keys</th><th align='left'>Action</th></tr>"
-        )
-        for sc in SHORTCUTS:
-            rows.append(
-                f"<tr><td><b>{_format_keys(sc.keys)}</b></td>"
-                f"<td>{sc.label}</td></tr>"
-            )
-        rows.append("</table>")
-        rows.append(
-            "<p style='color:gray'>Arrow keys pan the page when zoomed past "
-            "the window.</p>"
-        )
-
-        body = QLabel("".join(rows))
-        body.setTextFormat(Qt.TextFormat.RichText)
-        body.setMargin(12)
-
-        scroll = QScrollArea()
-        scroll.setWidget(body)
-        scroll.setWidgetResizable(True)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(self.reject)
-        buttons.accepted.connect(self.accept)
-
-        layout = QVBoxLayout(self)
-        layout.addWidget(scroll)
-        layout.addWidget(buttons)
+    win.bind("<Escape>", lambda e: win.destroy())
+    win.bind("<Key-question>", lambda e: win.destroy())
+    win.focus_set()

@@ -1,11 +1,11 @@
-"""Thin wrapper over pypdfium2 that renders pages to ``QImage``."""
+"""Thin wrapper over pypdfium2 that renders pages to PIL images."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 import pypdfium2 as pdfium
-from PySide6.QtGui import QImage
+from PIL import Image
 
 
 class Document:
@@ -14,9 +14,6 @@ class Document:
     def __init__(self, path: str | Path) -> None:
         self.path = str(path)
         self._pdf = pdfium.PdfDocument(self.path)
-        # Hold a reference to the numpy buffer backing the most recent QImage;
-        # QImage does not copy the data, so the array must outlive it.
-        self._buf = None
 
     def close(self) -> None:
         try:
@@ -32,24 +29,12 @@ class Document:
         """Return (width, height) of a page in points (1/72 inch)."""
         return self._pdf[index].get_size()
 
-    def render(self, index: int, scale: float, dpr: float = 1.0) -> QImage:
-        """Render ``index`` at ``scale`` (1.0 = 72 DPI), accounting for ``dpr``.
+    def render(self, index: int, scale: float) -> Image.Image:
+        """Render ``index`` at ``scale`` (1.0 = 72 DPI) to a PIL image.
 
-        The returned QImage carries the device-pixel-ratio so Qt downscales it
-        to logical size on HiDPI displays, keeping text crisp.
+        At scale 1.0 a point maps to one pixel, so a page's pixel width equals
+        its width in points — which is what the fit-to-width/height math relies
+        on.
         """
         page = self._pdf[index]
-        bitmap = page.render(scale=scale * dpr, rev_byteorder=True)
-        arr = bitmap.to_numpy()  # (h, w, 3 or 4), uint8 — RGB(A) byte order
-        self._buf = arr  # keep alive: QImage does not copy the buffer
-        height, width = arr.shape[0], arr.shape[1]
-        channels = arr.shape[2] if arr.ndim == 3 else 1
-        # pypdfium2 emits RGB for opaque pages and RGBA when alpha is present.
-        fmt = (
-            QImage.Format.Format_RGBA8888
-            if channels == 4
-            else QImage.Format.Format_RGB888
-        )
-        image = QImage(arr.data, width, height, arr.strides[0], fmt)
-        image.setDevicePixelRatio(dpr)
-        return image
+        return page.render(scale=scale).to_pil()

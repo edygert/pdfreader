@@ -10,7 +10,15 @@ a = Analysis(
     pathex=["../src"],
     binaries=binaries,
     datas=[],
-    hiddenimports=["pdfreader", "pdfreader.app"],
+    hiddenimports=[
+        "pdfreader",
+        "pdfreader.app",
+        # Wires Pillow's ImageTk to the frozen Tcl/Tk interpreter; without it
+        # ImageTk.PhotoImage fails with: invalid command name "PyImagingPhoto".
+        "PIL._tkinter_finder",
+        "PIL.Image",
+        "PIL.ImageTk",
+    ],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],

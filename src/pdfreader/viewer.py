@@ -1,136 +1,135 @@
-"""Main window: page display, scaling, navigation and keybindings."""
+"""Main window: page display, scaling, navigation and keybindings (Tkinter)."""
 
 from __future__ import annotations
 
+import tkinter as tk
 from pathlib import Path
+from tkinter import messagebox, simpledialog
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction, QKeySequence, QPixmap, QShortcut
-from PySide6.QtWidgets import (
-    QFileDialog,
-    QInputDialog,
-    QLabel,
-    QMainWindow,
-    QMessageBox,
-    QScrollArea,
-)
+from PIL import ImageTk
 
+from . import fonts
 from . import state as state_mod
+from .browser import FileBrowser
 from .document import Document
-from .help import SHORTCUTS, HelpDialog
+from .help import show_help
 from .state import CUSTOM, FIT_HEIGHT, FIT_WIDTH, FileState, State
 
 _MARGIN = 4  # px shaved off the viewport so fit modes avoid a stray scrollbar
+_PAN_STEP = 60  # px moved per arrow-key pan
 
 
-class MainWindow(QMainWindow):
-    def __init__(self, state: State) -> None:
-        super().__init__()
-        self.setWindowTitle("pdfreader")
-        self.resize(900, 1100)
-
+class Viewer:
+    def __init__(self, root: tk.Tk, state: State) -> None:
+        self.root = root
         self.state = state
         self.doc: Document | None = None
         self.page = 0
-        # Per-file reading position (page + scale). Replaced on open_path with
-        # the record for the actual file; a transient default until then.
+        # Per-file reading position; replaced on open_path with the file's own.
         self.fstate: FileState = FileState()
+        self._photo: ImageTk.PhotoImage | None = None
+        self._last_canvas_size = (0, 0)
+        self._resize_job: str | None = None
+        # Currently applied UI text scale (per-file; restored on open_path).
+        self.ui_scale = 1.0
 
-        self.label = QLabel(alignment=Qt.AlignmentFlag.AlignCenter)
-        self.label.setText("Press  O  to open a PDF   ·   ?  for help")
+        root.title("pdfreader")
+        root.geometry("900x1100")
+        root.configure(bg="#1e1e1e")
 
-        self.scroll = QScrollArea()
-        self.scroll.setWidget(self.label)
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setCentralWidget(self.scroll)
+        self.canvas = tk.Canvas(root, bg="#3a3a3a", highlightthickness=0)
+        self.vbar = tk.Scrollbar(root, orient="vertical", command=self.canvas.yview)
+        self.hbar = tk.Scrollbar(root, orient="horizontal", command=self.canvas.xview)
+        self.canvas.configure(
+            yscrollcommand=self.vbar.set, xscrollcommand=self.hbar.set
+        )
+        self.status = tk.Label(
+            root, bg="#1e1e1e", fg="#cccccc", anchor="w", padx=8, pady=3,
+            font="UiFont",
+        )
 
-        self._resize_timer = QTimer(self)
-        self._resize_timer.setSingleShot(True)
-        self._resize_timer.setInterval(80)
-        self._resize_timer.timeout.connect(self._on_resize_settled)
+        self.status.pack(side="bottom", fill="x")
+        self.hbar.pack(side="bottom", fill="x")
+        self.vbar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
 
-        self._handlers = {
-            "open": self.open_dialog,
-            "goto": self.goto_dialog,
-            "next": self.next_page,
-            "prev": self.prev_page,
-            "first": self.first_page,
-            "last": self.last_page,
-            "zoom_in": self.zoom_in,
-            "zoom_out": self.zoom_out,
-            "fit_width": self.fit_width,
-            "fit_height": self.fit_height,
-            "custom_scale": self.custom_scale_dialog,
-            "help": self.show_help,
-            "quit": self.close,
-        }
-        self._install_shortcuts()
-        self._build_menu()
-        self.statusBar().showMessage("No document open")
+        self.canvas.create_text(
+            20,
+            20,
+            anchor="nw",
+            fill="#dddddd",
+            text="Press  o  to open a PDF   ·   ?  for help",
+            font="UiTitle",
+        )
+        self._set_status("No document open")
 
-    # ----- setup -------------------------------------------------------
-    def _install_shortcuts(self) -> None:
-        for sc in SHORTCUTS:
-            handler = self._handlers[sc.action]
-            for key in sc.keys:
-                shortcut = QShortcut(QKeySequence(key), self)
-                shortcut.activated.connect(handler)
+        self._bind_keys()
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
 
-    def _build_menu(self) -> None:
-        bar = self.menuBar()
+    # ----- key bindings ------------------------------------------------
+    def _bind_keys(self) -> None:
+        r = self.root
+        r.bind("o", lambda e: self.open_dialog())
+        r.bind("g", lambda e: self.goto_dialog())
 
-        file_menu = bar.addMenu("&File")
-        file_menu.addAction(self._action("Open…", self.open_dialog, "O"))
-        file_menu.addSeparator()
-        file_menu.addAction(self._action("Quit", self.close, "Q"))
+        for key in ("<space>", "<Next>", "j"):
+            r.bind(key, lambda e: self.next_page())
+        for key in ("<Prior>", "k"):
+            r.bind(key, lambda e: self.prev_page())
+        r.bind("<Home>", lambda e: self.first_page())
+        r.bind("<End>", lambda e: self.last_page())
 
-        view = bar.addMenu("&View")
-        view.addAction(self._action("Fit width", self.fit_width, "W"))
-        view.addAction(self._action("Fit height", self.fit_height, "H"))
-        view.addAction(self._action("Custom scale…", self.custom_scale_dialog, "F"))
-        view.addSeparator()
-        view.addAction(self._action("Zoom in", self.zoom_in, "+"))
-        view.addAction(self._action("Zoom out", self.zoom_out, "-"))
+        for key in ("<plus>", "<equal>", "<KP_Add>"):
+            r.bind(key, lambda e: self.zoom_in())
+        for key in ("<minus>", "<KP_Subtract>"):
+            r.bind(key, lambda e: self.zoom_out())
+        r.bind("w", lambda e: self.fit_width())
+        r.bind("h", lambda e: self.fit_height())
+        r.bind("f", lambda e: self.custom_scale_dialog())
 
-        go = bar.addMenu("&Go")
-        go.addAction(self._action("Go to page…", self.goto_dialog, "G"))
-        go.addAction(self._action("Next page", self.next_page, "J"))
-        go.addAction(self._action("Previous page", self.prev_page, "K"))
-        go.addAction(self._action("First page", self.first_page, "Home"))
-        go.addAction(self._action("Last page", self.last_page, "End"))
+        # Arrow keys pan the page (canvas scroll), never flip pages.
+        r.bind("<Up>", lambda e: self.canvas.yview_scroll(-1, "units"))
+        r.bind("<Down>", lambda e: self.canvas.yview_scroll(1, "units"))
+        r.bind("<Left>", lambda e: self.canvas.xview_scroll(-1, "units"))
+        r.bind("<Right>", lambda e: self.canvas.xview_scroll(1, "units"))
+        # Mouse wheel vertical scroll (Linux sends Button-4/5).
+        self.canvas.bind("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))
+        self.canvas.bind("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))
+        self.canvas.bind(
+            "<MouseWheel>",
+            lambda e: self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units"),
+        )
 
-        help_menu = bar.addMenu("&Help")
-        help_menu.addAction(self._action("Shortcuts…", self.show_help, "F1"))
+        # UI text scaling (chrome only, separate from page zoom +/-/=).
+        for key in ("<Control-plus>", "<Control-equal>", "<Control-KP_Add>"):
+            r.bind(key, lambda e: self.ui_scale_up())
+        for key in ("<Control-minus>", "<Control-KP_Subtract>"):
+            r.bind(key, lambda e: self.ui_scale_down())
+        r.bind("<Control-Key-0>", lambda e: self.ui_scale_reset())
 
-    def _action(self, text: str, slot, shortcut_hint: str) -> QAction:
-        action = QAction(text, self)
-        # Hint only — real shortcuts are the global QShortcuts so each action
-        # can have several keys. Showing one keeps the menu readable.
-        action.setShortcut(QKeySequence(shortcut_hint))
-        action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
-        action.triggered.connect(slot)
-        return action
+        r.bind("?", lambda e: show_help(self.root))
+        r.bind("<F1>", lambda e: show_help(self.root))
+        r.bind("q", lambda e: self.quit())
+        self.root.protocol("WM_DELETE_WINDOW", self.quit)
 
     # ----- document lifecycle -----------------------------------------
     def open_path(self, path: str) -> bool:
         try:
             doc = Document(path)
         except Exception as exc:  # noqa: BLE001 - surface any load failure
-            QMessageBox.critical(self, "Cannot open PDF", f"{path}\n\n{exc}")
+            messagebox.showerror("Cannot open PDF", f"{path}\n\n{exc}")
             return False
 
-        # Resolve to an absolute path so the same file keys the same record
-        # regardless of how it was opened (CLI, dialog, relative path).
+        # Resolve to absolute so the same file keys the same saved record.
         path = str(Path(path).resolve())
-
         if self.doc is not None:
             self.doc.close()
         self.doc = doc
         self.state.last_file = path
-        # Restore this file's remembered page and scale (new files default).
         self.fstate = self.state.for_file(path)
-        self.setWindowTitle(f"{Path(path).name} — pdfreader")
+        # Restore this file's saved UI text size.
+        self.ui_scale = fonts.apply_scale(self.fstate.ui_scale)
+        self.root.title(f"{Path(path).name} — pdfreader")
 
         count = self.doc.page_count
         self.page = min(max(self.fstate.page, 0), max(count - 1, 0))
@@ -147,8 +146,8 @@ class MainWindow(QMainWindow):
             self.page = index
             self._render_current()
             self._save()
-        # Reset scroll to top of the new page.
-        self.scroll.verticalScrollBar().setValue(0)
+        self.canvas.yview_moveto(0.0)
+        self.canvas.xview_moveto(0.0)
 
     def next_page(self) -> None:
         self._goto(self.page + 1)
@@ -166,26 +165,29 @@ class MainWindow(QMainWindow):
     def goto_dialog(self) -> None:
         if not self.doc:
             return
-        page, ok = QInputDialog.getInt(
-            self,
+        page = simpledialog.askinteger(
             "Go to page",
             f"Page (1–{self.doc.page_count}):",
-            value=self.page + 1,
-            minValue=1,
-            maxValue=self.doc.page_count,
+            parent=self.root,
+            initialvalue=self.page + 1,
+            minvalue=1,
+            maxvalue=self.doc.page_count,
         )
-        if ok:
+        if page is not None:
             self._goto(page - 1)
 
     # ----- scaling -----------------------------------------------------
+    def _viewport(self) -> tuple[int, int]:
+        return self.canvas.winfo_width(), self.canvas.winfo_height()
+
     def _effective_scale(self) -> float:
         assert self.doc is not None
         w_pt, h_pt = self.doc.page_size(self.page)
-        vp = self.scroll.viewport().size()
+        vw, vh = self._viewport()
         if self.fstate.scale_mode == FIT_WIDTH:
-            return max(0.05, (vp.width() - _MARGIN) / w_pt)
+            return max(0.05, (vw - _MARGIN) / w_pt)
         if self.fstate.scale_mode == FIT_HEIGHT:
-            return max(0.05, (vp.height() - _MARGIN) / h_pt)
+            return max(0.05, (vh - _MARGIN) / h_pt)
         return self.fstate.custom_factor
 
     def _current_factor(self) -> float:
@@ -200,34 +202,37 @@ class MainWindow(QMainWindow):
         self._save()
 
     def zoom_in(self) -> None:
-        self._set_custom(self._current_factor() * 1.25)
+        if self.doc:
+            self._set_custom(self._current_factor() * 1.25)
 
     def zoom_out(self) -> None:
-        self._set_custom(self._current_factor() * 0.8)
+        if self.doc:
+            self._set_custom(self._current_factor() * 0.8)
 
     def fit_width(self) -> None:
-        self.fstate.scale_mode = FIT_WIDTH
-        self._render_current()
-        self._save()
+        if self.doc:
+            self.fstate.scale_mode = FIT_WIDTH
+            self._render_current()
+            self._save()
 
     def fit_height(self) -> None:
-        self.fstate.scale_mode = FIT_HEIGHT
-        self._render_current()
-        self._save()
+        if self.doc:
+            self.fstate.scale_mode = FIT_HEIGHT
+            self._render_current()
+            self._save()
 
     def custom_scale_dialog(self) -> None:
         if not self.doc:
             return
-        percent, ok = QInputDialog.getDouble(
-            self,
+        percent = simpledialog.askfloat(
             "Custom scale",
             "Scale (%):",
-            value=round(self._current_factor() * 100, 1),
-            minValue=5.0,
-            maxValue=1200.0,
-            decimals=1,
+            parent=self.root,
+            initialvalue=round(self._current_factor() * 100, 1),
+            minvalue=5.0,
+            maxvalue=1200.0,
         )
-        if ok:
+        if percent is not None:
             self._set_custom(percent / 100.0)
 
     # ----- rendering ---------------------------------------------------
@@ -235,20 +240,22 @@ class MainWindow(QMainWindow):
         if not self.doc:
             return
         scale = self._effective_scale()
-        dpr = self.devicePixelRatioF() or 1.0
-        image = self.doc.render(self.page, scale, dpr)
-        self.label.setPixmap(QPixmap.fromImage(image))
-        # For fit modes the page fills a dimension and should hug the viewport;
-        # for custom/zoom the label must grow so the scroll area can pan it.
-        resizable = self.fstate.scale_mode in (FIT_WIDTH, FIT_HEIGHT)
-        self.scroll.setWidgetResizable(resizable)
-        if not resizable:
-            self.label.adjustSize()
+        image = self.doc.render(self.page, scale)
+        self._photo = ImageTk.PhotoImage(image)
+
+        self.canvas.delete("all")
+        vw, _ = self._viewport()
+        # Centre horizontally when the page is narrower than the viewport.
+        x = max(vw, image.width) // 2
+        self.canvas.create_image(x, 0, anchor="n", image=self._photo)
+        self.canvas.configure(
+            scrollregion=(0, 0, max(vw, image.width), image.height)
+        )
         self._update_status()
 
     def _update_status(self) -> None:
         if not self.doc:
-            self.statusBar().showMessage("No document open")
+            self._set_status("No document open")
             return
         percent = round(self._effective_scale() * 100)
         mode = self.fstate.scale_mode
@@ -258,40 +265,63 @@ class MainWindow(QMainWindow):
             scale_text = f"Fit height ({percent}%)"
         else:
             scale_text = f"{percent}%"
-        self.statusBar().showMessage(
+        self._set_status(
             f"Page {self.page + 1} / {self.doc.page_count}    ·    {scale_text}"
         )
 
+    def _set_status(self, text: str) -> None:
+        self.status.config(text=text)
+
+    # ----- resize handling --------------------------------------------
+    def _on_canvas_configure(self, event) -> None:
+        size = (event.width, event.height)
+        if size == self._last_canvas_size:
+            return
+        self._last_canvas_size = size
+        if not self.doc or self.fstate.scale_mode not in (FIT_WIDTH, FIT_HEIGHT):
+            return
+        # Debounce: re-render fit modes only once resizing settles.
+        if self._resize_job is not None:
+            self.root.after_cancel(self._resize_job)
+        self._resize_job = self.root.after(80, self._render_current)
+
+    # ----- UI text scaling --------------------------------------------
+    def _apply_ui_scale(self, scale: float) -> None:
+        self.ui_scale = fonts.apply_scale(scale)
+        if self.doc:
+            # Remember per file, like page and page-scale.
+            self.fstate.ui_scale = self.ui_scale
+            state_mod.save(self.state)
+        self.status.config(text=f"UI text {round(self.ui_scale * 100)}%")
+        # Restore the normal status line shortly after.
+        self.root.after(1200, self._update_status)
+
+    def ui_scale_up(self) -> None:
+        self._apply_ui_scale(self.ui_scale * 1.1)
+
+    def ui_scale_down(self) -> None:
+        self._apply_ui_scale(self.ui_scale * 0.9)
+
+    def ui_scale_reset(self) -> None:
+        self._apply_ui_scale(1.0)
+
     # ----- misc handlers ----------------------------------------------
     def open_dialog(self) -> None:
-        start_dir = ""
+        start = Path.home()
         if self.state.last_file:
-            start_dir = str(Path(self.state.last_file).parent)
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Open PDF", start_dir, "PDF files (*.pdf);;All files (*)"
-        )
+            parent = Path(self.state.last_file).parent
+            if parent.is_dir():
+                start = parent
+        path = FileBrowser(self.root, start, scaler=self).choose()
         if path:
             self.open_path(path)
-
-    def show_help(self) -> None:
-        HelpDialog(self).exec()
-
-    def resizeEvent(self, event) -> None:  # noqa: N802 - Qt signature
-        super().resizeEvent(event)
-        # Re-render fit modes only after resizing settles, to avoid thrashing.
-        if self.doc and self.fstate.scale_mode in (FIT_WIDTH, FIT_HEIGHT):
-            self._resize_timer.start()
-
-    def _on_resize_settled(self) -> None:
-        if self.doc:
-            self._render_current()
 
     def _save(self) -> None:
         self.fstate.page = self.page
         state_mod.save(self.state)
 
-    def closeEvent(self, event) -> None:  # noqa: N802 - Qt signature
+    def quit(self) -> None:
         self._save()
         if self.doc:
             self.doc.close()
-        super().closeEvent(event)
+        self.root.destroy()
