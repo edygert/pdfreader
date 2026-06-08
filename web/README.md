@@ -28,13 +28,35 @@ address bar, or ⋮ → *Cast, save, and share* → *Install pdfreader…*.) Aft
 load the service worker caches everything, so the installed app **launches from the
 shelf and works offline**.
 
-## Deploy it (minimum effort)
+## Deploy it (recommended — most reliable)
 
-Because there's no build, deploying = copying these static files to any host that
-serves HTTPS:
+Hosting the app at a stable **HTTPS** URL is the robust way to run it: the installed
+PWA launches from the shelf online or offline, with no local server ever, and none
+of the fragility of a `localhost`-origin install. Because there's no build step,
+deploying is just copying these static files to any static host.
 
-- **GitHub Pages / Netlify / Cloudflare Pages** — drop the `web/` folder; you get an
-  HTTPS URL that's installable as a PWA on any device.
+### Netlify Drop (fastest, no account needed to try)
+
+1. Go to **<https://app.netlify.com/drop>** in Chrome.
+2. Drag the **`web/`** folder onto the page. Drag the folder *itself* so its contents
+   land at the site root — `index.html`, `manifest.webmanifest`, and `sw.js` must be
+   at `/`, not under `/web/…`, or the manifest/service worker paths 404 and the app
+   won't be installable.
+3. Netlify gives you an `https://<name>.netlify.app` URL. Open it in a **normal**
+   (non-Incognito) Chrome window.
+4. If the **⬇ Install app** button doesn't appear immediately, **reload once**
+   (Ctrl-R) — the service worker has to take control before Chrome offers install.
+5. Click **⬇ Install app** (or Chrome's install icon in the address bar). It opens in
+   its own standalone window and is added to the shelf; thereafter it runs offline.
+
+**Updating after code changes:** re-drag the `web/` folder onto Netlify Drop (or
+connect the repo for auto-deploy), then open the app and reload once so the new
+service worker (`pdfreader-vN`) installs and replaces the old one.
+
+### Other hosts
+
+**GitHub Pages** or **Cloudflare Pages** work the same way — point them at the
+contents of `web/` so the files are served from the site root over HTTPS.
 
 ## Open a file
 
