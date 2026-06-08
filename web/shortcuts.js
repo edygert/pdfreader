@@ -13,6 +13,7 @@ export const SHORTCUTS = [
   ["Fit to width", ["Shift W"]],
   ["Fit to height", ["Shift H"]],
   ["Custom scale (enter %)", ["f"]],
+  ["Rotate clockwise / counter", ["r", "Shift r"]],
   ["UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]],
   ["Pan (when zoomed)", ["h j k l", "← → ↑ ↓"]],
   ["Show this help", ["?", "F1"]],
@@ -21,7 +22,7 @@ export const SHORTCUTS = [
 
 export const CHEATS =
   "o open · : goto · Ctrl-f/b page · gg/G first/last · hjkl pan · " +
-  "W/H fit · f scale · +/- zoom · Ctrl +/- text · ? help · q quit";
+  "W/H fit · f scale · +/- zoom · r/R rotate · Ctrl +/- text · ? help · q quit";
 
 export function helpHTML() {
   const rows = SHORTCUTS.map(

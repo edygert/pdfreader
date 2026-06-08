@@ -31,7 +31,7 @@ let uiMsgJob = null;
 
 // ---------- rendering & scaling ----------
 async function effectiveScale() {
-  const [wpt, hpt] = await doc.pageSize(page);
+  const [wpt, hpt] = await doc.pageSize(page, record.rotation || 0);
   const vw = viewportEl.clientWidth;
   const vh = viewportEl.clientHeight;
   if (record.scaleMode === FIT_WIDTH) return Math.max(0.05, (vw - MARGIN) / wpt);
@@ -52,7 +52,7 @@ async function renderCurrent() {
   lastScale = scale;
   const dpr = window.devicePixelRatio || 1;
   try {
-    await doc.render(page, scale, dpr, canvas);
+    await doc.render(page, scale, dpr, canvas, record.rotation || 0);
   } catch (err) {
     if (err && err.name === "RenderingCancelledException") return;
     console.error(err);
@@ -95,6 +95,15 @@ async function customScaleDialog() {
   const pct = parseFloat(ans);
   if (!isNaN(pct)) setCustom(Math.max(5, Math.min(pct, 1200)) / 100);
 }
+
+// ---------- rotation ----------
+async function setRotation(deg) {
+  record.rotation = ((deg % 360) + 360) % 360;
+  await renderCurrent(); // fit modes recompute against the rotated dimensions
+  save();
+}
+const rotateCW = () => doc && setRotation((record.rotation || 0) + 90);
+const rotateCCW = () => doc && setRotation((record.rotation || 0) - 90);
 
 // ---------- navigation ----------
 async function goto(index) {
@@ -149,9 +158,10 @@ function updateStatus() {
   if (record.scaleMode === FIT_WIDTH) scaleText = `Fit width (${pct}%)`;
   else if (record.scaleMode === FIT_HEIGHT) scaleText = `Fit height (${pct}%)`;
   else scaleText = `${pct}%`;
+  const rot = record.rotation ? `    ·    ↻${record.rotation}°` : "";
   setStatus(
     `${record.name}    ·    Page ${page + 1} / ${doc.pageCount}` +
-      `    ·    ${scaleText}        ${CHEATS}`
+      `    ·    ${scaleText}${rot}        ${CHEATS}`
   );
 }
 
@@ -201,6 +211,7 @@ async function openFile(file, handle) {
   record.size = file.size;
   if (handle) record.handle = handle;
 
+  record.rotation = record.rotation || 0; // default for records saved pre-rotation
   uiScale = record.uiScale || 1.0;
   applyUiScaleVar(uiScale);
   page = Math.min(Math.max(record.page || 0, 0), doc.pageCount - 1);
@@ -294,6 +305,8 @@ function onKeyDown(e) {
     case "W": return done(e, fitWidth);
     case "H": return done(e, fitHeight);
     case "f": return done(e, customScaleDialog);
+    case "r": return done(e, rotateCW);
+    case "R": return done(e, rotateCCW);
     case "h": return done(e, () => panX(-1));
     case "l": return done(e, () => panX(1));
     case "j": return done(e, () => panY(1));

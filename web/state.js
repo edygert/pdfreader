@@ -59,6 +59,7 @@ export function defaultRecord(key, name, size) {
     scaleMode: FIT_WIDTH,
     customFactor: 1.0,
     uiScale: 1.0,
+    rotation: 0, // degrees clockwise: 0 / 90 / 180 / 270
     handle: null,
     opened: Date.now(),
   };

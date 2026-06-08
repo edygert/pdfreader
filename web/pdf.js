@@ -20,7 +20,6 @@ export class PdfDoc {
   constructor(doc) {
     this._doc = doc;
     this._pages = new Map(); // index (0-based) -> PDFPageProxy
-    this._sizes = new Map(); // index -> [wPt, hPt]
     this._task = null;
   }
 
@@ -37,21 +36,20 @@ export class PdfDoc {
     return p;
   }
 
-  async pageSize(index) {
-    let s = this._sizes.get(index);
-    if (!s) {
-      const vp = (await this._page(index)).getViewport({ scale: 1 });
-      s = [vp.width, vp.height];
-      this._sizes.set(index, s);
-    }
-    return s;
+  // Displayed [width, height] in points at the given extra rotation (degrees
+  // clockwise, on top of the page's own /Rotate). Swaps for 90/270.
+  async pageSize(index, rotation = 0) {
+    const page = await this._page(index);
+    const vp = page.getViewport({ scale: 1, rotation: page.rotate + rotation });
+    return [vp.width, vp.height];
   }
 
   // Render page `index` at `scale` (1.0 = 72 DPI) into `canvas`, sharp on HiDPI
-  // via `dpr`. Returns the logical {width, height} in CSS pixels.
-  async render(index, scale, dpr, canvas) {
+  // via `dpr`, rotated `rotation` degrees clockwise. Returns the logical
+  // {width, height} in CSS pixels.
+  async render(index, scale, dpr, canvas, rotation = 0) {
     const page = await this._page(index);
-    const viewport = page.getViewport({ scale });
+    const viewport = page.getViewport({ scale, rotation: page.rotate + rotation });
     const out = dpr || 1;
     canvas.width = Math.floor(viewport.width * out);
     canvas.height = Math.floor(viewport.height * out);

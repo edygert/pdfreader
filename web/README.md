@@ -125,6 +125,7 @@ default). File handling only works once the PWA is installed.
 | Zoom page | `+` / `=` , `-` |
 | Fit width / height | `Shift+W` / `Shift+H` |
 | Custom scale | `f` |
+| Rotate clockwise / counter | `r` / `Shift+R` |
 | UI text size | `Ctrl +` / `Ctrl -` / `Ctrl 0` |
 | Help | `?` / `F1` |
 | Close | `q` |
