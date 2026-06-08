@@ -71,28 +71,6 @@ body {
   border-top: 1px solid #000;
 }
 
-/* Resume button (auto-reopen needs a click to re-grant file permission). */
-#resume {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: none;
-  padding: 14px 22px;
-  font-size: calc(16px * var(--ui-scale));
-  color: #fff;
-  background: #3d6fa5;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-}
-#resume.show {
-  display: block;
-}
-#resume:hover {
-  background: #4a82c0;
-}
-
 /* Install button — shown only when the browser reports the app is installable. */
 #install {
   position: fixed;

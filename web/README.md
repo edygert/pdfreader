@@ -60,11 +60,18 @@ contents of `web/` so the files are served from the site root over HTTPS.
 
 ## Open a file
 
-- Press <kbd>o</kbd> to pick a PDF, or **drag a PDF onto the window**.
-- The last file, page, scale, and text size are remembered per file (IndexedDB).
-- On a fresh launch the app offers a **Resume** button to reopen your last PDF — one
-  click re-grants read access (the browser requires a gesture). Installed PWAs can
-  retain permission and resume silently.
+- **Right-click a PDF in the Files app → Open with → pdfreader** (the installed app
+  registers as a `.pdf` handler). Each file opens in its own window
+  (`launch_handler: navigate-new`), so you can have several PDFs open side by side.
+- Or, inside the app, press <kbd>o</kbd> to pick a PDF, or **drag a PDF onto the
+  window**.
+- The app does **not** auto-resume a previous file — it starts at the open prompt.
+- Page, scale, and UI text size are still remembered **per file** (IndexedDB), so
+  reopening a given PDF restores where you were in it.
+
+After deploying an update, the file-association may need a nudge: in the ChromeOS
+Files app, right-click a PDF → *Open with…* → set **pdfreader** (optionally as
+default). File handling only works once the PWA is installed.
 
 ## Shortcuts
 

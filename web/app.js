@@ -1,5 +1,5 @@
 // Main app: rendering, navigation, scaling, vim keymap, status line, per-file
-// memory, drag-drop + picker, auto-resume. Mirrors the standalone viewer.py.
+// memory, drag-drop + picker, OS file handler. Mirrors the standalone viewer.py.
 
 import { PdfDoc } from "./pdf.js";
 import * as state from "./state.js";
@@ -14,7 +14,6 @@ const viewportEl = document.getElementById("viewport");
 const canvas = document.getElementById("page");
 const statusEl = document.getElementById("status");
 const helpEl = document.getElementById("help");
-const resumeEl = document.getElementById("resume");
 const hintEl = document.getElementById("hint");
 const fileInput = document.getElementById("file-input");
 const installEl = document.getElementById("install");
@@ -206,9 +205,7 @@ async function openFile(file, handle) {
   applyUiScaleVar(uiScale);
   page = Math.min(Math.max(record.page || 0, 0), doc.pageCount - 1);
 
-  await state.setLastFileKey(key);
   hintEl.classList.add("hidden");
-  hideResume();
   document.title = `${file.name} — pdfreader`;
   await renderCurrent();
   save();
@@ -248,22 +245,21 @@ function save() {
   state.putFileState(record);
 }
 
-// ---------- resume button ----------
-function showResume(name, handle) {
-  resumeEl.textContent = `▶  Resume ${name}`;
-  resumeEl.classList.add("show");
-  resumeEl.onclick = async () => {
+// ---------- OS file handler ("Open with pdfreader") ----------
+function setupLaunchQueue() {
+  if (!("launchQueue" in window)) return;
+  // When the OS opens a PDF with this app, the file arrives here as a
+  // FileSystemFileHandle.
+  window.launchQueue.setConsumer(async (params) => {
+    if (!params || !params.files || !params.files.length) return;
     try {
-      const perm = await handle.requestPermission?.({ mode: "read" });
-      if (perm && perm !== "granted") return;
-      await openFromHandle(handle);
+      const handle = params.files[0];
+      const file = await handle.getFile();
+      await openFile(file, handle);
     } catch (err) {
       console.error(err);
     }
-  };
-}
-function hideResume() {
-  resumeEl.classList.remove("show");
+  });
 }
 
 // ---------- keyboard ----------
@@ -378,6 +374,7 @@ async function init() {
   helpEl.innerHTML = helpHTML();
   updateStatus();
   setupInstall();
+  setupLaunchQueue();
 
   window.addEventListener("keydown", onKeyDown);
   setupDnD();
@@ -397,22 +394,8 @@ async function init() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
-
-  // Auto-resume the last file.
-  const lastKey = await state.getLastFileKey();
-  if (lastKey) {
-    const rec = await state.getFileState(lastKey);
-    if (rec && rec.handle) {
-      try {
-        const perm = await rec.handle.queryPermission?.({ mode: "read" });
-        if (perm === "granted") {
-          await openFromHandle(rec.handle);
-          return;
-        }
-      } catch (_) {}
-      showResume(rec.name, rec.handle);
-    }
-  }
+  // No auto-resume: the app starts at the open prompt. A file is opened only via
+  // the OS file handler (setupLaunchQueue), the picker (o), or drag-drop.
 }
 
 init();

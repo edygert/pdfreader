@@ -17,5 +17,8 @@
       "action": "./index.html",
       "accept": { "application/pdf": [".pdf"] }
     }
-  ]
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-new"
+  }
 }
