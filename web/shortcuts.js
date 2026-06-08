@@ -21,8 +21,8 @@ export const SHORTCUTS = [
 ];
 
 export const CHEATS =
-  "o open · : goto · Ctrl-f/b page · gg/G first/last · hjkl pan · " +
-  "W/H fit · f scale · +/- zoom · r/R rotate · Ctrl +/- text · ? help · q quit";
+  "o open · : goto · Ctrl-f/b page · hjkl pan · " +
+  "W/H fit · f scale · +/- zoom · r/R rotate · ? help · q quit";
 
 export function helpHTML() {
   const rows = SHORTCUTS.map(
