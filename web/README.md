@@ -49,14 +49,54 @@ deploying is just copying these static files to any static host.
 5. Click **⬇ Install app** (or Chrome's install icon in the address bar). It opens in
    its own standalone window and is added to the shelf; thereafter it runs offline.
 
-**Updating after code changes:** re-drag the `web/` folder onto Netlify Drop (or
-connect the repo for auto-deploy), then open the app and reload once so the new
-service worker (`pdfreader-vN`) installs and replaces the old one.
-
 ### Other hosts
 
 **GitHub Pages** or **Cloudflare Pages** work the same way — point them at the
 contents of `web/` so the files are served from the site root over HTTPS.
+
+## Updating a deployed install
+
+The app is served by a **service worker**, so a redeploy doesn't reach the installed
+app until that worker updates. The strategy in `sw.js` is set up to make this almost
+automatic:
+
+- **App code** — `index.html`, `*.js`, `styles.css`, `manifest.webmanifest` — is
+  **network-first**. A new deploy is picked up on the next online launch; no version
+  bump needed.
+- **Vendored PDF.js + icons** (`vendor/`, `icons/`) are **cache-first** (so the
+  ~2.8 MB engine isn't refetched every launch).
+
+### Normal update (you changed app code)
+
+1. Re-deploy: drag the `web/` folder onto <https://app.netlify.com/drop> (same site),
+   or `git push` if you've connected the repo for auto-deploy.
+2. Open the app (shelf icon) and **reload once or twice** (Ctrl-R). The browser
+   re-checks `sw.js`, the new app code loads, done.
+
+That's it — because app code is network-first, you do **not** need to touch `sw.js`.
+
+### When you change vendored PDF.js or icons
+
+Those are cache-first, so bump the cache name so the new worker re-caches them:
+
+- Edit `sw.js` → change `const CACHE = "pdfreader-vN"` to the next number
+  (`v3` → `v4`).
+- Re-deploy. On the next launch the new worker installs, deletes the old cache, and
+  re-fetches the vendored files.
+
+### If an update seems stuck
+
+The service worker only swaps in on a fresh launch, and Chrome re-checks `sw.js` at
+most once a day unless you reload. To force it:
+
+- Reload the app a couple of times, **or**
+- DevTools (F12) → **Application → Service Workers → Update** (or **Storage → Clear
+  site data**), then reload, **or**
+- Uninstall and reinstall the PWA from the URL.
+
+> Tip: bump the `CACHE` constant in `sw.js` on any release where you want to be 100%
+> certain every client drops its old cache — it forces a clean re-cache even for the
+> cache-first assets.
 
 ## Open a file
 
