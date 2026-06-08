@@ -9,3 +9,6 @@ __pycache__/
 # PyInstaller build artifacts (build/pdfreader.spec is source and IS tracked)
 /build_work/
 /dist/
+
+# Deploy artifact (zip of web/ for static-host drag-drop)
+/web.zip
