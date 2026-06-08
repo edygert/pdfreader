@@ -26,6 +26,7 @@ SHORTCUTS: list[Shortcut] = [
     Shortcut("Fit to height", ["Shift H"]),
     Shortcut("Custom scale (enter %)", ["f"]),
     Shortcut("Rotate clockwise / counter", ["r", "Shift R"]),
+    Shortcut("Page color: white / off-white / dark", ["t"]),
     Shortcut("UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]),
     Shortcut("Pan (when zoomed)", ["h j k l", "← → ↑ ↓"]),
     Shortcut("Show this help", ["?", "F1"]),

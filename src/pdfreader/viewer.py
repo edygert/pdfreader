@@ -18,6 +18,10 @@ from .state import CUSTOM, FIT_HEIGHT, FIT_WIDTH, FileState, State
 _MARGIN = 4  # px shaved off the viewport so fit modes avoid a stray scrollbar
 _PAN_STEP = 60  # px moved per arrow-key pan
 
+# Global page-color themes and the matching canvas surround colour.
+_PAGE_THEMES = ["white", "off-white", "dark"]
+_THEME_BG = {"white": "#3a3a3a", "off-white": "#2e2a24", "dark": "#111111"}
+
 
 class Viewer:
     def __init__(self, root: tk.Tk, state: State) -> None:
@@ -39,7 +43,9 @@ class Viewer:
         root.configure(bg="#1e1e1e")
         self._maximize(root)
 
-        self.canvas = tk.Canvas(root, bg="#3a3a3a", highlightthickness=0)
+        self.canvas = tk.Canvas(
+            root, bg=_THEME_BG.get(state.page_theme, "#3a3a3a"), highlightthickness=0
+        )
         self.vbar = tk.Scrollbar(root, orient="vertical", command=self.canvas.yview)
         self.hbar = tk.Scrollbar(root, orient="horizontal", command=self.canvas.xview)
         self.canvas.configure(
@@ -132,6 +138,7 @@ class Viewer:
         r.bind("f", lambda e: self.custom_scale_dialog())
         r.bind("r", lambda e: self.rotate_cw())
         r.bind("R", lambda e: self.rotate_ccw())  # Shift+R
+        r.bind("t", lambda e: self.cycle_theme())
 
         # Pan the page: arrows and vim j/k (down/up). Ctrl+Left/Right also page.
         r.bind("<Left>", lambda e: self.canvas.xview_scroll(-1, "units"))
@@ -319,12 +326,26 @@ class Viewer:
         if self.doc:
             self._set_rotation(self.fstate.rotation - 90)
 
+    # ----- page color theme (global) ----------------------------------
+    def cycle_theme(self) -> None:
+        cur = self.state.page_theme if self.state.page_theme in _PAGE_THEMES else "white"
+        nxt = _PAGE_THEMES[(_PAGE_THEMES.index(cur) + 1) % len(_PAGE_THEMES)]
+        self.state.page_theme = nxt
+        self.canvas.config(bg=_THEME_BG[nxt])
+        if self.doc:
+            self._render_current()
+        state_mod.save(self.state)
+        self._set_status(f"Page color: {nxt}")
+        self.root.after(1200, self._update_status)
+
     # ----- rendering ---------------------------------------------------
     def _render_current(self) -> None:
         if not self.doc:
             return
         scale = self._effective_scale()
-        image = self.doc.render(self.page, scale, self.fstate.rotation)
+        image = self.doc.render(
+            self.page, scale, self.fstate.rotation, self.state.page_theme
+        )
         self._photo = ImageTk.PhotoImage(image)
 
         self.canvas.delete("all")

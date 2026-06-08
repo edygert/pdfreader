@@ -32,6 +32,7 @@ class FileState:
 @dataclass
 class State:
     last_file: str | None = None
+    page_theme: str = "white"  # global: white / off-white / dark
     files: dict[str, FileState] = field(default_factory=dict)
 
     def for_file(self, path: str) -> FileState:
@@ -79,7 +80,11 @@ def load() -> State:
             )
         except (ValueError, AttributeError):
             continue
-    return State(last_file=data.get("last_file"), files=files)
+    return State(
+        last_file=data.get("last_file"),
+        page_theme=data.get("page_theme", "white"),
+        files=files,
+    )
 
 
 def save(state: State) -> None:
@@ -90,6 +95,7 @@ def save(state: State) -> None:
             del state.files[stale]
     payload = {
         "last_file": state.last_file,
+        "page_theme": state.page_theme,
         "files": {p: asdict(r) for p, r in state.files.items()},
     }
     try:

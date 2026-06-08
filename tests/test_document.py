@@ -63,6 +63,24 @@ def test_rotation_swaps_dimensions(sample_pdf: str) -> None:
         doc.close()
 
 
+def test_page_color_themes(sample_pdf: str) -> None:
+    from pdfreader.document import Document
+
+    doc = Document(sample_pdf)
+    try:
+        # A blank page is white; sample center pixel.
+        white = doc.render(0, scale=0.5, theme="white").convert("RGB").getpixel((10, 10))
+        off = doc.render(0, scale=0.5, theme="off-white").convert("RGB").getpixel((10, 10))
+        dark = doc.render(0, scale=0.5, theme="dark").convert("RGB").getpixel((10, 10))
+        assert white == (255, 255, 255)
+        # off-white dims, and is warm (blue dimmed most).
+        assert off[0] < 255 and off[2] < off[0]
+        # dark inverts white toward black.
+        assert max(dark) < 60
+    finally:
+        doc.close()
+
+
 def test_fit_width_scale_math() -> None:
     # Mirrors viewer._effective_scale for FIT_WIDTH: scale = viewport / w_pt.
     w_pt = 612
@@ -78,6 +96,7 @@ def test_state_roundtrip_per_file(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(st, "_config_dir", lambda: cfg)
 
     s = st.State()
+    s.page_theme = "dark"
     a = s.for_file("/docs/a.pdf")
     a.page, a.scale_mode, a.custom_factor, a.ui_scale, a.rotation = (
         5, st.CUSTOM, 0.5, 1.4, 90,
@@ -89,6 +108,7 @@ def test_state_roundtrip_per_file(tmp_path, monkeypatch) -> None:
 
     loaded = st.load()
     assert loaded.last_file == "/docs/b.pdf"
+    assert loaded.page_theme == "dark"
     assert loaded.for_file("/docs/a.pdf").page == 5
     assert loaded.for_file("/docs/a.pdf").custom_factor == pytest.approx(0.5)
     assert loaded.for_file("/docs/a.pdf").ui_scale == pytest.approx(1.4)
