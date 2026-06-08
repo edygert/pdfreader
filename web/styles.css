@@ -42,6 +42,22 @@ body {
   display: block;
 }
 
+/* Page color themes (global). Applied as a filter on the rendered page, plus a
+   matching surround. White = default (no filter). */
+body[data-page-theme="sepia"] #page {
+  filter: sepia(0.35) brightness(0.92);
+}
+body[data-page-theme="sepia"] #viewport {
+  background: #2e2a24;
+}
+body[data-page-theme="dark"] #page {
+  /* invert(0.9) softens pure black/white; hue-rotate keeps colors sane. */
+  filter: invert(0.9) hue-rotate(180deg);
+}
+body[data-page-theme="dark"] #viewport {
+  background: #111111;
+}
+
 #hint {
   position: fixed;
   top: 24px;

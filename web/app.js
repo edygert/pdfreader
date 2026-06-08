@@ -191,6 +191,31 @@ const uiScaleUp = () => applyUiScale(uiScale * 1.1);
 const uiScaleDown = () => applyUiScale(uiScale * 0.9);
 const uiScaleReset = () => applyUiScale(1.0);
 
+// ---------- page color theme (global) ----------
+const PAGE_THEMES = ["white", "off-white", "dark"];
+function applyPageTheme(theme) {
+  // CSS keys "sepia" to the off-white look.
+  document.body.dataset.pageTheme = theme === "off-white" ? "sepia" : theme;
+}
+function loadPageTheme() {
+  try {
+    return localStorage.getItem("pageTheme") || "white";
+  } catch (_) {
+    return "white";
+  }
+}
+function cyclePageTheme() {
+  const cur = loadPageTheme();
+  const next = PAGE_THEMES[(PAGE_THEMES.indexOf(cur) + 1) % PAGE_THEMES.length] || "white";
+  applyPageTheme(next);
+  try {
+    localStorage.setItem("pageTheme", next);
+  } catch (_) {}
+  setStatus(`Page color: ${next}`);
+  clearTimeout(uiMsgJob);
+  uiMsgJob = setTimeout(updateStatus, 1200);
+}
+
 // ---------- opening files ----------
 async function openFile(file, handle) {
   let buf;
@@ -307,6 +332,7 @@ function onKeyDown(e) {
     case "f": return done(e, customScaleDialog);
     case "r": return done(e, rotateCW);
     case "R": return done(e, rotateCCW);
+    case "t": return done(e, cyclePageTheme);
     case "h": return done(e, () => panX(-1));
     case "l": return done(e, () => panX(1));
     case "j": return done(e, () => panY(1));
@@ -384,6 +410,7 @@ function setupInstall() {
 // ---------- init ----------
 async function init() {
   applyUiScaleVar(1);
+  applyPageTheme(loadPageTheme());
   helpEl.innerHTML = helpHTML();
   updateStatus();
   setupInstall();

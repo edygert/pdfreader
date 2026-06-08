@@ -14,6 +14,7 @@ export const SHORTCUTS = [
   ["Fit to height", ["Shift H"]],
   ["Custom scale (enter %)", ["f"]],
   ["Rotate clockwise / counter", ["r", "Shift r"]],
+  ["Page color: white / off-white / dark", ["t"]],
   ["UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]],
   ["Pan (when zoomed)", ["h j k l", "← → ↑ ↓"]],
   ["Show this help", ["?", "F1"]],
