@@ -18,10 +18,15 @@ cd web
 python3 -m http.server 8000      # or:  npx serve .   /   bunx serve .
 ```
 
-Open <http://localhost:8000> in Chrome. To install: ⋮ menu → **Install pdfreader**
-(or the install icon in the address bar). After the first load the service worker
-caches everything, so the installed app **launches from the shelf and works
-offline**.
+Open **`http://localhost:8000`** in Chrome — it must be the `localhost` address, not
+a `192.168.x.x` network address (only `localhost`/HTTPS count as a secure context),
+and **not an Incognito window** (PWAs can't be installed there).
+
+When the app is installable, an **"⬇ Install app" button** appears in the top-right
+of the app itself — click it. (Chrome's own affordance is the install icon in the
+address bar, or ⋮ → *Cast, save, and share* → *Install pdfreader…*.) After the first
+load the service worker caches everything, so the installed app **launches from the
+shelf and works offline**.
 
 ## Deploy it (minimum effort)
 

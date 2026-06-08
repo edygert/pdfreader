@@ -93,6 +93,28 @@ body {
   background: #4a82c0;
 }
 
+/* Install button — shown only when the browser reports the app is installable. */
+#install {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: none;
+  padding: 8px 14px;
+  font-size: calc(14px * var(--ui-scale));
+  color: #fff;
+  background: #3d6fa5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 9;
+}
+#install.show {
+  display: block;
+}
+#install:hover {
+  background: #4a82c0;
+}
+
 /* Help overlay */
 #help {
   position: fixed;

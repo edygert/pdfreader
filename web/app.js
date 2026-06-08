@@ -17,6 +17,7 @@ const helpEl = document.getElementById("help");
 const resumeEl = document.getElementById("resume");
 const hintEl = document.getElementById("hint");
 const fileInput = document.getElementById("file-input");
+const installEl = document.getElementById("install");
 
 // ---- session state ----
 let doc = null;
@@ -348,11 +349,35 @@ function setupDnD() {
   });
 }
 
+// ---------- install prompt ----------
+let deferredPrompt = null;
+function setupInstall() {
+  // Fires only when the browser deems the app installable (https/localhost, not
+  // incognito, manifest + SW valid). Gives an in-app button so the user need not
+  // hunt through Chrome's menus.
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installEl.classList.add("show");
+  });
+  installEl.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installEl.classList.remove("show");
+  });
+  window.addEventListener("appinstalled", () =>
+    installEl.classList.remove("show")
+  );
+}
+
 // ---------- init ----------
 async function init() {
   applyUiScaleVar(1);
   helpEl.innerHTML = helpHTML();
   updateStatus();
+  setupInstall();
 
   window.addEventListener("keydown", onKeyDown);
   setupDnD();
