@@ -26,6 +26,7 @@ class FileState:
     scale_mode: str = FIT_WIDTH
     custom_factor: float = 1.0
     ui_scale: float = 1.0  # chrome/text size for this file (page scale is separate)
+    rotation: int = 0  # degrees clockwise: 0 / 90 / 180 / 270
 
 
 @dataclass
@@ -74,6 +75,7 @@ def load() -> State:
                 scale_mode=rec.get("scale_mode", FIT_WIDTH),
                 custom_factor=float(rec.get("custom_factor", 1.0)),
                 ui_scale=float(rec.get("ui_scale", 1.0)),
+                rotation=int(rec.get("rotation", 0)),
             )
         except (ValueError, AttributeError):
             continue

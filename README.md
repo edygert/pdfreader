@@ -30,6 +30,7 @@ uv run python -m pdfreader file.pdf  # open a specific file
 | Fit to width      | `Shift W`                |
 | Fit to height     | `Shift H`                |
 | Custom scale (%)  | `f`                      |
+| Rotate cw / ccw   | `r` / `Shift+R`          |
 | UI text size      | `Ctrl +` / `Ctrl -` / `Ctrl 0` |
 | Pan the page      | `h` `j` `k` `l`, Arrow keys |
 | Help              | `?` / `F1`               |

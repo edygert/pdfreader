@@ -25,6 +25,7 @@ SHORTCUTS: list[Shortcut] = [
     Shortcut("Fit to width", ["Shift W"]),
     Shortcut("Fit to height", ["Shift H"]),
     Shortcut("Custom scale (enter %)", ["f"]),
+    Shortcut("Rotate clockwise / counter", ["r", "Shift R"]),
     Shortcut("UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]),
     Shortcut("Pan (when zoomed)", ["h j k l", "← → ↑ ↓"]),
     Shortcut("Show this help", ["?", "F1"]),
@@ -33,8 +34,8 @@ SHORTCUTS: list[Shortcut] = [
 
 # Abbreviated one-line cheat sheet shown along the bottom of the window.
 CHEATS = (
-    "o open · : goto · Ctrl-f/b page · gg/G first/last · hjkl pan · "
-    "W/H fit · f scale · +/- zoom · Ctrl +/- text · ? help · q quit"
+    "o open · : goto · Ctrl-f/b page · hjkl pan · "
+    "W/H fit · f scale · +/- zoom · r/R rotate · ? help · q quit"
 )
 
 

@@ -47,6 +47,22 @@ def test_render_dimensions_track_scale(sample_pdf: str) -> None:
         doc.close()
 
 
+def test_rotation_swaps_dimensions(sample_pdf: str) -> None:
+    from pdfreader.document import Document
+
+    doc = Document(sample_pdf)
+    try:
+        # page_size swaps for 90/270.
+        assert doc.page_size(0, 0) == pytest.approx((612, 792))
+        assert doc.page_size(0, 90) == pytest.approx((792, 612))
+        assert doc.page_size(0, 180) == pytest.approx((612, 792))
+        # render swaps the raster too.
+        img = doc.render(0, scale=1.0, rotation=90)
+        assert abs(img.width - 792) <= 1 and abs(img.height - 612) <= 1
+    finally:
+        doc.close()
+
+
 def test_fit_width_scale_math() -> None:
     # Mirrors viewer._effective_scale for FIT_WIDTH: scale = viewport / w_pt.
     w_pt = 612
@@ -63,7 +79,9 @@ def test_state_roundtrip_per_file(tmp_path, monkeypatch) -> None:
 
     s = st.State()
     a = s.for_file("/docs/a.pdf")
-    a.page, a.scale_mode, a.custom_factor, a.ui_scale = 5, st.CUSTOM, 0.5, 1.4
+    a.page, a.scale_mode, a.custom_factor, a.ui_scale, a.rotation = (
+        5, st.CUSTOM, 0.5, 1.4, 90,
+    )
     b = s.for_file("/docs/b.pdf")
     b.page, b.scale_mode, b.ui_scale = 8, st.FIT_HEIGHT, 0.8
     s.last_file = "/docs/b.pdf"
@@ -74,5 +92,7 @@ def test_state_roundtrip_per_file(tmp_path, monkeypatch) -> None:
     assert loaded.for_file("/docs/a.pdf").page == 5
     assert loaded.for_file("/docs/a.pdf").custom_factor == pytest.approx(0.5)
     assert loaded.for_file("/docs/a.pdf").ui_scale == pytest.approx(1.4)
+    assert loaded.for_file("/docs/a.pdf").rotation == 90
     assert loaded.for_file("/docs/b.pdf").scale_mode == st.FIT_HEIGHT
     assert loaded.for_file("/docs/b.pdf").ui_scale == pytest.approx(0.8)
+    assert loaded.for_file("/docs/b.pdf").rotation == 0

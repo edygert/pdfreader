@@ -130,6 +130,8 @@ class Viewer:
         r.bind("W", lambda e: self.fit_width())   # Shift+W (h/l are vim pan)
         r.bind("H", lambda e: self.fit_height())  # Shift+H
         r.bind("f", lambda e: self.custom_scale_dialog())
+        r.bind("r", lambda e: self.rotate_cw())
+        r.bind("R", lambda e: self.rotate_ccw())  # Shift+R
 
         # Pan the page: arrows and vim j/k (down/up). Ctrl+Left/Right also page.
         r.bind("<Left>", lambda e: self.canvas.xview_scroll(-1, "units"))
@@ -250,7 +252,7 @@ class Viewer:
 
     def _effective_scale(self) -> float:
         assert self.doc is not None
-        w_pt, h_pt = self.doc.page_size(self.page)
+        w_pt, h_pt = self.doc.page_size(self.page, self.fstate.rotation)
         vw, vh = self._viewport()
         if self.fstate.scale_mode == FIT_WIDTH:
             return max(0.05, (vw - _MARGIN) / w_pt)
@@ -303,12 +305,26 @@ class Viewer:
         if percent is not None:
             self._set_custom(percent / 100.0)
 
+    # ----- rotation ----------------------------------------------------
+    def _set_rotation(self, deg: int) -> None:
+        self.fstate.rotation = deg % 360
+        self._render_current()  # fit modes recompute against rotated dims
+        self._save()
+
+    def rotate_cw(self) -> None:
+        if self.doc:
+            self._set_rotation(self.fstate.rotation + 90)
+
+    def rotate_ccw(self) -> None:
+        if self.doc:
+            self._set_rotation(self.fstate.rotation - 90)
+
     # ----- rendering ---------------------------------------------------
     def _render_current(self) -> None:
         if not self.doc:
             return
         scale = self._effective_scale()
-        image = self.doc.render(self.page, scale)
+        image = self.doc.render(self.page, scale, self.fstate.rotation)
         self._photo = ImageTk.PhotoImage(image)
 
         self.canvas.delete("all")
@@ -334,9 +350,10 @@ class Viewer:
         else:
             scale_text = f"{percent}%"
         name = Path(self.doc.path).name
+        rot = f"    ·    ↻{self.fstate.rotation}°" if self.fstate.rotation else ""
         self._set_status(
             f"{name}    ·    Page {self.page + 1} / {self.doc.page_count}"
-            f"    ·    {scale_text}        {CHEATS}"
+            f"    ·    {scale_text}{rot}        {CHEATS}"
         )
 
     def _set_status(self, text: str) -> None:
