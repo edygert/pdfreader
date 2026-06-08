@@ -1,10 +1,17 @@
-// Offline service worker. Navigations are network-first (fresh when online,
-// cached app shell when offline); other same-origin GETs are cache-first with a
-// network fallback. Every branch is guarded so the handler can never reject and
-// strand a navigation with ERR_FAILED.
+// Offline service worker.
+//
+// Strategy chosen so redeploys actually propagate without manual cache-busting:
+//   - App shell/code (HTML, JS, CSS, manifest): NETWORK-FIRST. Always fresh when
+//     online (so a new deploy takes effect on the next launch and index.html +
+//     app.js never end up on mismatched versions), cached copy used offline.
+//   - Big immutable assets (vendored PDF.js, icons): CACHE-FIRST, so the ~2.8 MB
+//     engine isn't refetched every launch.
+// Every branch is guarded so the handler can't reject and strand a navigation
+// with ERR_FAILED.
 
-const CACHE = "pdfreader-v2";
+const CACHE = "pdfreader-v3";
 
+// Seed the cache so the very first offline launch has everything.
 const CORE = [
   "./",
   "./index.html",
@@ -21,11 +28,15 @@ const CORE = [
   "./vendor/pdfjs/pdf.worker.js",
 ];
 
+// Paths served cache-first (large + rarely changing).
+function isImmutable(pathname) {
+  return pathname.includes("/vendor/") || pathname.includes("/icons/");
+}
+
 self.addEventListener("install", (e) => {
   e.waitUntil(
     (async () => {
       const c = await caches.open(CACHE);
-      // Individual adds so one failure can't abort the whole precache.
       await Promise.allSettled(CORE.map((u) => c.add(u)));
       await self.skipWaiting();
     })()
@@ -44,6 +55,38 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+async function networkFirst(req, fallbackKey) {
+  try {
+    const res = await fetch(req);
+    if (res && res.ok) {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(fallbackKey || req, copy)).catch(() => {});
+    }
+    return res;
+  } catch (_) {
+    return (
+      (await caches.match(req)) ||
+      (fallbackKey ? await caches.match(fallbackKey) : null) ||
+      Response.error()
+    );
+  }
+}
+
+async function cacheFirst(req) {
+  const hit = await caches.match(req).catch(() => null);
+  if (hit) return hit;
+  try {
+    const res = await fetch(req);
+    if (res && res.ok) {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+    }
+    return res;
+  } catch (_) {
+    return Response.error();
+  }
+}
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
@@ -55,39 +98,15 @@ self.addEventListener("fetch", (e) => {
   }
   if (url.origin !== self.location.origin) return;
 
-  // Navigations: try the network first; fall back to the cached app shell.
   if (req.mode === "navigate") {
-    e.respondWith(
-      (async () => {
-        try {
-          return await fetch(req);
-        } catch (_) {
-          return (
-            (await caches.match("./index.html")) ||
-            (await caches.match("./")) ||
-            Response.error()
-          );
-        }
-      })()
-    );
+    // Network-first, fall back to the cached shell offline.
+    e.respondWith(networkFirst(req, "./index.html"));
     return;
   }
-
-  // Assets: cache-first, then network (and cache the result).
-  e.respondWith(
-    (async () => {
-      const hit = await caches.match(req).catch(() => null);
-      if (hit) return hit;
-      try {
-        const res = await fetch(req);
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        }
-        return res;
-      } catch (_) {
-        return Response.error();
-      }
-    })()
-  );
+  if (isImmutable(url.pathname)) {
+    e.respondWith(cacheFirst(req));
+    return;
+  }
+  // App code (js/css/manifest): network-first so deploys propagate immediately.
+  e.respondWith(networkFirst(req));
 });
