@@ -16,6 +16,7 @@ class Shortcut:
 SHORTCUTS: list[Shortcut] = [
     Shortcut("Open file", ["o"]),
     Shortcut("Go to page", [":"]),
+    Shortcut("Table of contents", ["c"]),
     Shortcut("Next page", ["Ctrl f", "Ctrl →", "Space", "PageDown"]),
     Shortcut("Previous page", ["Ctrl b", "Ctrl ←", "PageUp"]),
     Shortcut("First page", ["gg", "Home"]),

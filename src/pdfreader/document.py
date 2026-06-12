@@ -56,6 +56,24 @@ class Document:
             return h, w
         return w, h
 
+    def toc(self) -> list[tuple[int, str, int | None]]:
+        """Return the document outline (bookmarks) as a flat list of
+        ``(level, title, page_index)``. ``page_index`` is 0-based, or None if
+        the entry has no page destination. Empty if the PDF has no outline.
+        """
+        items: list[tuple[int, str, int | None]] = []
+        try:
+            for bm in self._pdf.get_toc():
+                dest = bm.get_dest()
+                try:
+                    idx = dest.get_index() if dest is not None else None
+                except Exception:
+                    idx = None
+                items.append((bm.level, bm.get_title(), idx))
+        except Exception:
+            return []
+        return items
+
     def render(
         self, index: int, scale: float, rotation: int = 0, theme: str = "white"
     ) -> Image.Image:

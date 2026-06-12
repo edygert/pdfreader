@@ -13,6 +13,7 @@ from . import state as state_mod
 from .browser import FileBrowser
 from .document import Document
 from .help import CHEATS, show_help
+from .toc import TocPopup
 from .state import CUSTOM, FIT_HEIGHT, FIT_WIDTH, FileState, State
 
 _MARGIN = 4  # px shaved off the viewport so fit modes avoid a stray scrollbar
@@ -139,6 +140,7 @@ class Viewer:
         r.bind("r", lambda e: self.rotate_cw())
         r.bind("R", lambda e: self.rotate_ccw())  # Shift+R
         r.bind("t", lambda e: self.cycle_theme())
+        r.bind("c", lambda e: self.show_toc())
 
         # Pan the page: arrows and vim j/k (down/up). Ctrl+Left/Right also page.
         r.bind("<Left>", lambda e: self.canvas.xview_scroll(-1, "units"))
@@ -337,6 +339,22 @@ class Viewer:
         state_mod.save(self.state)
         self._set_status(f"Page color: {nxt}")
         self.root.after(1200, self._update_status)
+
+    # ----- table of contents ------------------------------------------
+    def show_toc(self) -> None:
+        if not self.doc:
+            return
+        items = self.doc.toc()
+        if not items:
+            messagebox.showinfo(
+                "Table of contents",
+                "No table of contents in this PDF.",
+                parent=self.root,
+            )
+            return
+        page = TocPopup(self.root, items, scaler=self).choose()
+        if page is not None:
+            self._goto(page)
 
     # ----- rendering ---------------------------------------------------
     def _render_current(self) -> None:

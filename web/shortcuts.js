@@ -4,6 +4,7 @@
 export const SHORTCUTS = [
   ["Open file", ["o", "drag-drop"]],
   ["Go to page", [":"]],
+  ["Table of contents", ["c"]],
   ["Next page", ["Ctrl f", "Ctrl →", "Space", "PageDown"]],
   ["Previous page", ["Ctrl b", "Ctrl ←", "PageUp"]],
   ["First page", ["gg", "Home"]],

@@ -62,6 +62,46 @@ export class PdfDoc {
     return { width: viewport.width, height: viewport.height };
   }
 
+  // Resolve a PDF destination (named or explicit) to a 0-based page index.
+  async _destToPage(dest) {
+    if (!dest) return null;
+    let explicit = dest;
+    if (typeof dest === "string") {
+      explicit = await this._doc.getDestination(dest);
+    }
+    if (!Array.isArray(explicit) || !explicit[0]) return null;
+    try {
+      return await this._doc.getPageIndex(explicit[0]);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Flatten the document outline (bookmarks) to a list of
+  // { title, level, page } with page resolved to a 0-based index.
+  async getToc() {
+    let raw;
+    try {
+      raw = await this._doc.getOutline();
+    } catch (_) {
+      return [];
+    }
+    if (!raw || !raw.length) return [];
+    const out = [];
+    const walk = async (items, level) => {
+      for (const it of items) {
+        out.push({
+          title: (it.title || "").trim(),
+          level,
+          page: await this._destToPage(it.dest),
+        });
+        if (it.items && it.items.length) await walk(it.items, level + 1);
+      }
+    };
+    await walk(raw, 0);
+    return out;
+  }
+
   cancel() {
     if (this._task) {
       try {

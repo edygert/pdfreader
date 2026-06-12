@@ -14,6 +14,7 @@ const viewportEl = document.getElementById("viewport");
 const canvas = document.getElementById("page");
 const statusEl = document.getElementById("status");
 const helpEl = document.getElementById("help");
+const tocEl = document.getElementById("toc");
 const hintEl = document.getElementById("hint");
 const fileInput = document.getElementById("file-input");
 const installEl = document.getElementById("install");
@@ -172,6 +173,72 @@ function hideHelp() {
   helpEl.classList.remove("show");
 }
 
+// ---------- table of contents (outline) popup ----------
+let tocItems = [];
+let tocSel = 0;
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])
+  );
+}
+
+const tocVisible = () => tocEl.classList.contains("show");
+const hideToc = () => tocEl.classList.remove("show");
+
+async function showToc() {
+  if (!doc) return;
+  tocItems = await doc.getToc();
+  if (!tocItems.length) {
+    tocEl.innerHTML =
+      `<div class="toc-card"><h2>Table of Contents</h2>` +
+      `<p class="dim">No table of contents in this PDF.</p></div>`;
+    tocEl.classList.add("show");
+    return;
+  }
+  // Start on the entry for the current page, if any.
+  tocSel = tocItems.findIndex((it) => it.page === page);
+  if (tocSel < 0) tocSel = 0;
+  renderToc();
+  tocEl.classList.add("show");
+}
+
+function renderToc() {
+  const rows = tocItems
+    .map((it, i) => {
+      const pad = 8 + it.level * 18;
+      const pg = it.page != null ? `<span class="toc-pg">${it.page + 1}</span>` : "";
+      return (
+        `<div class="toc-row${i === tocSel ? " sel" : ""}" data-i="${i}" ` +
+        `style="padding-left:${pad}px">${escapeHtml(it.title)}${pg}</div>`
+      );
+    })
+    .join("");
+  tocEl.innerHTML = `<div class="toc-card"><h2>Table of Contents</h2><div class="toc-list">${rows}</div></div>`;
+  tocEl.querySelectorAll(".toc-row").forEach((el) =>
+    el.addEventListener("click", () => tocJump(parseInt(el.dataset.i, 10)))
+  );
+  const sel = tocEl.querySelector(".toc-row.sel");
+  if (sel) sel.scrollIntoView({ block: "nearest" });
+}
+
+function tocMove(delta) {
+  if (!tocItems.length) return;
+  tocSel = Math.min(Math.max(tocSel + delta, 0), tocItems.length - 1);
+  renderToc();
+}
+
+function tocJump(i) {
+  const it = tocItems[i];
+  hideToc();
+  if (it && it.page != null) goto(it.page);
+}
+
+function toggleToc() {
+  if (tocVisible()) hideToc();
+  else showToc();
+}
+
 // ---------- UI text scaling (chrome only) ----------
 function applyUiScaleVar(s) {
   document.documentElement.style.setProperty("--ui-scale", s);
@@ -303,6 +370,18 @@ function onKeyDown(e) {
   const k = e.key;
   const ctrl = e.ctrlKey || e.metaKey;
 
+  // While the contents popup is open, keys navigate it (and nothing else).
+  if (tocVisible()) {
+    if (k === "Escape" || k === "c") return done(e, hideToc);
+    if (k === "ArrowDown" || k === "j") return done(e, () => tocMove(1));
+    if (k === "ArrowUp" || k === "k") return done(e, () => tocMove(-1));
+    if (k === "Enter") return done(e, () => tocJump(tocSel));
+    if (k === "Home") return done(e, () => { tocSel = 0; renderToc(); });
+    if (k === "End") return done(e, () => { tocSel = tocItems.length - 1; renderToc(); });
+    if (!ctrl) e.preventDefault(); // swallow other keys so the page doesn't react
+    return;
+  }
+
   if (ctrl) {
     if (k === "+" || k === "=") return done(e, uiScaleUp);
     if (k === "-") return done(e, uiScaleDown);
@@ -333,6 +412,7 @@ function onKeyDown(e) {
     case "r": return done(e, rotateCW);
     case "R": return done(e, rotateCCW);
     case "t": return done(e, cyclePageTheme);
+    case "c": return done(e, toggleToc);
     case "h": return done(e, () => panX(-1));
     case "l": return done(e, () => panX(1));
     case "j": return done(e, () => panY(1));
@@ -430,6 +510,9 @@ async function init() {
     resizeJob = setTimeout(renderCurrent, 80);
   });
   helpEl.addEventListener("click", hideHelp);
+  tocEl.addEventListener("click", (e) => {
+    if (e.target === tocEl) hideToc(); // click the backdrop (not a row) to close
+  });
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});

@@ -119,6 +119,7 @@ default). File handling only works once the PWA is installed.
 | --- | --- |
 | Open file | `o`, drag-drop |
 | Go to page | `:` |
+| Table of contents | `c` |
 | Next / previous page | `Ctrl-f` / `Ctrl-b` (also Space/PageDown, PageUp, Ctrl-→/←) |
 | First / last page | `gg` / `G` (also Home / End) |
 | Pan | `h` `j` `k` `l`, arrows, touchpad |

@@ -81,6 +81,17 @@ def test_page_color_themes(sample_pdf: str) -> None:
         doc.close()
 
 
+def test_toc_empty_when_no_outline(sample_pdf: str) -> None:
+    from pdfreader.document import Document
+
+    doc = Document(sample_pdf)
+    try:
+        # The generated sample has no bookmarks.
+        assert doc.toc() == []
+    finally:
+        doc.close()
+
+
 def test_fit_width_scale_math() -> None:
     # Mirrors viewer._effective_scale for FIT_WIDTH: scale = viewport / w_pt.
     w_pt = 612
