@@ -1,13 +1,30 @@
 """In-window 'recent files' popup.
 
-Lists the most-recently-opened PDFs; choosing one returns its path so the viewer
-can reopen it. Mirrors the table-of-contents popup (see toc.py).
+Lists the most-recently-opened PDFs as filename rows — name on the left, file
+size on the right — mirroring the PWA's recent-files card. Choosing one returns
+its path so the viewer can reopen it.
 """
 
 from __future__ import annotations
 
 import tkinter as tk
 from pathlib import Path
+
+# Colours mirror the web popup (.toc-card / .recent-row in styles.css).
+_BG = "#2b2b2b"
+_SEL_BG = "#3d6fa5"
+_HOVER_BG = "#37414e"
+_NAME_FG = "#dddddd"
+_NAME_SEL_FG = "#ffffff"
+_META_FG = "#88aabb"
+_META_SEL_FG = "#cceeff"
+
+
+def _fmt_size(num_bytes: int) -> str:
+    """Human-readable file size, matching the PWA's fmtSize()."""
+    if num_bytes >= 1024 * 1024:
+        return f"{num_bytes / (1024 * 1024):.1f} MB"
+    return f"{max(1, round(num_bytes / 1024))} KB"
 
 
 class RecentPopup:
@@ -19,50 +36,62 @@ class RecentPopup:
         self.paths = list(paths)
         self.selected_path: str | None = None
         self.scaler = scaler
+        self.sel = 0
+        self._rows: list[tuple[tk.Label, tk.Label]] = []  # (name, meta) per file
 
         self.win = tk.Toplevel(parent)
         self.win.title("Recent Files")
-        self.win.configure(bg="#2b2b2b")
+        self.win.configure(bg=_BG)
         self.win.transient(parent)
         self.win.grab_set()
+        self.win.minsize(520, 0)  # width like the PWA card; height fits content
 
         tk.Label(
-            self.win, text="Recent Files", bg="#2b2b2b", fg="#ffffff",
+            self.win, text="Recent Files", bg=_BG, fg="#ffffff",
             font="DialogTitle",
         ).pack(anchor="w", padx=16, pady=(12, 8))
 
-        frame = tk.Frame(self.win, bg="#2b2b2b")
-        frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-        scrollbar = tk.Scrollbar(frame, orient="vertical")
-        self.listbox = tk.Listbox(
-            frame,
-            bg="#2b2b2b",
-            fg="#eeeeee",
-            selectbackground="#3d6fa5",
-            highlightthickness=0,
-            activestyle="none",
-            yscrollcommand=scrollbar.set,
-            font="DialogFont",
-            width=72,
-            height=min(max(len(self.paths), 1), 10),
-        )
-        scrollbar.config(command=self.listbox.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.listbox.pack(side="left", fill="both", expand=True)
+        # One grid row per file: name expands (column 0), size sits at the right
+        # (column 1). No scrollbar — the window grows to show all ten.
+        rows = tk.Frame(self.win, bg=_BG)
+        rows.pack(fill="both", expand=True, padx=8)
+        rows.columnconfigure(0, weight=1)
+
+        for i, p in enumerate(self.paths):
+            path = Path(p)
+            try:
+                meta = _fmt_size(path.stat().st_size)
+            except OSError:
+                meta = ""
+            name = tk.Label(
+                rows, text=path.name, bg=_BG, fg=_NAME_FG, anchor="w",
+                font="DialogFont", padx=8, pady=4,
+            )
+            size = tk.Label(
+                rows, text=meta, bg=_BG, fg=_META_FG, anchor="e",
+                font="DialogFont", padx=8, pady=4,
+            )
+            name.grid(row=i, column=0, sticky="ew")
+            size.grid(row=i, column=1, sticky="e")
+            self._rows.append((name, size))
+            for w in (name, size):
+                w.bind("<Button-1>", lambda e, idx=i: self._activate(idx))
+                w.bind("<Enter>", lambda e, idx=i: self._hover(idx, True))
+                w.bind("<Leave>", lambda e, idx=i: self._hover(idx, False))
 
         tk.Label(
             self.win,
-            text="Enter / double-click: open · Esc: close",
-            bg="#2b2b2b", fg="#888888", font="DialogSmall",
-        ).pack(pady=(0, 8))
+            text="↑/↓ or j/k · Enter / click: open · Esc: close",
+            bg=_BG, fg="#888888", font="DialogSmall",
+        ).pack(pady=(8, 10))
 
-        for p in self.paths:
-            path = Path(p)
-            self.listbox.insert(tk.END, f"{path.name}    —    {path.parent}")
-
-        self.listbox.bind("<Double-Button-1>", lambda e: self._activate())
-        self.listbox.bind("<Return>", lambda e: self._activate())
-        self.win.bind("<Return>", lambda e: self._activate())
+        self.win.bind("<Up>", lambda e: self._move(-1))
+        self.win.bind("<Down>", lambda e: self._move(1))
+        self.win.bind("k", lambda e: self._move(-1))
+        self.win.bind("j", lambda e: self._move(1))
+        self.win.bind("<Home>", lambda e: self._select(0))
+        self.win.bind("<End>", lambda e: self._select(len(self.paths) - 1))
+        self.win.bind("<Return>", lambda e: self._activate(self.sel))
         self.win.bind("<Escape>", lambda e: self._cancel())
 
         if self.scaler is not None:
@@ -72,16 +101,46 @@ class RecentPopup:
                 self.win.bind(key, lambda e: self.scaler.ui_scale_down())
             self.win.bind("<Control-Key-0>", lambda e: self.scaler.ui_scale_reset())
 
-        self.listbox.focus_set()
-        if self.listbox.size():
-            self.listbox.selection_set(0)
+        self.win.focus_set()
+        self._paint()
 
-    def _activate(self) -> None:
-        sel = self.listbox.curselection()
-        if not sel:
-            return
-        self.selected_path = self.paths[sel[0]]
-        self.win.destroy()
+    # ----- row appearance ---------------------------------------------
+    def _colors(self, idx: int, hovering: bool) -> tuple[str, str, str]:
+        if idx == self.sel:
+            return _SEL_BG, _NAME_SEL_FG, _META_SEL_FG
+        if hovering:
+            return _HOVER_BG, _NAME_FG, _META_FG
+        return _BG, _NAME_FG, _META_FG
+
+    def _apply(self, idx: int, hovering: bool = False) -> None:
+        bg, nfg, mfg = self._colors(idx, hovering)
+        name, size = self._rows[idx]
+        name.config(bg=bg, fg=nfg)
+        size.config(bg=bg, fg=mfg)
+
+    def _paint(self) -> None:
+        for i in range(len(self._rows)):
+            self._apply(i)
+
+    def _hover(self, idx: int, entering: bool) -> None:
+        if idx != self.sel:
+            self._apply(idx, hovering=entering)
+
+    # ----- selection / activation -------------------------------------
+    def _move(self, delta: int) -> None:
+        if self._rows:
+            self._select(self.sel + delta)
+
+    def _select(self, idx: int) -> None:
+        idx = min(max(idx, 0), len(self._rows) - 1)
+        old, self.sel = self.sel, idx
+        self._apply(old)
+        self._apply(idx)
+
+    def _activate(self, idx: int) -> None:
+        if 0 <= idx < len(self.paths):
+            self.selected_path = self.paths[idx]
+            self.win.destroy()
 
     def _cancel(self) -> None:
         self.win.destroy()
