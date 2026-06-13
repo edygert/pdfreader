@@ -102,6 +102,18 @@ export async function setLastFileKey(key) {
   } catch (_) {}
 }
 
+// Most-recently-opened file records, newest first (for the recent-files popup).
+export async function recentFiles(limit = 10) {
+  try {
+    const store = await tx(FILES, "readonly");
+    const all = await reqAsync(store.getAll());
+    all.sort((a, b) => (b.opened || 0) - (a.opened || 0));
+    return all.slice(0, limit);
+  } catch (_) {
+    return [];
+  }
+}
+
 // Keep only the most-recently-opened MAX_FILES records.
 async function trim() {
   const store = await tx(FILES, "readwrite");

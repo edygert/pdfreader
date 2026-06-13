@@ -13,6 +13,7 @@ from . import state as state_mod
 from .browser import FileBrowser
 from .document import Document
 from .help import CHEATS, show_help
+from .recent import RecentPopup
 from .toc import TocPopup
 from .state import CUSTOM, FIT_HEIGHT, FIT_WIDTH, FileState, State
 
@@ -116,6 +117,7 @@ class Viewer:
     def _bind_keys(self) -> None:
         r = self.root
         r.bind("o", lambda e: self.open_dialog())
+        r.bind("O", lambda e: self.show_recent())  # Shift+O: Open Recent
         r.bind("<colon>", lambda e: self.goto_dialog())  # vim :NN
         # gg → first page, G → last page (vim). 'g' is a prefix: a lone g waits
         # briefly for a second g.
@@ -355,6 +357,26 @@ class Viewer:
         page = TocPopup(self.root, items, scaler=self).choose()
         if page is not None:
             self._goto(page)
+
+    # ----- recent files -----------------------------------------------
+    def show_recent(self) -> None:
+        """Popup of the last 10 opened files (excluding the current one)."""
+        current = self.state.last_file
+        paths = [
+            p
+            for p in self.state.recent_files(limit=11)
+            if p != current and Path(p).is_file()
+        ][:10]
+        if not paths:
+            messagebox.showinfo(
+                "Recent files",
+                "No other recent files to open.",
+                parent=self.root,
+            )
+            return
+        path = RecentPopup(self.root, paths, scaler=self).choose()
+        if path:
+            self.open_path(path)
 
     # ----- rendering ---------------------------------------------------
     def _render_current(self) -> None:

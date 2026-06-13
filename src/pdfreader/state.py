@@ -45,6 +45,14 @@ class State:
         self.files[path] = record
         return record
 
+    def recent_files(self, limit: int = 10) -> list[str]:
+        """Most-recently-opened file paths, newest first.
+
+        Derived from ``files`` insertion order (newest last), which ``for_file``
+        maintains, so the recent list needs no extra bookkeeping.
+        """
+        return list(reversed(self.files))[:limit]
+
 
 def _config_dir() -> Path:
     """Platform-appropriate per-user config directory for the app."""

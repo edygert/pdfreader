@@ -127,3 +127,19 @@ def test_state_roundtrip_per_file(tmp_path, monkeypatch) -> None:
     assert loaded.for_file("/docs/b.pdf").scale_mode == st.FIT_HEIGHT
     assert loaded.for_file("/docs/b.pdf").ui_scale == pytest.approx(0.8)
     assert loaded.for_file("/docs/b.pdf").rotation == 0
+
+
+def test_recent_files_newest_first_and_capped() -> None:
+    from pdfreader import state as st
+
+    s = st.State()
+    for i in range(15):
+        s.for_file(f"/docs/f{i}.pdf")
+    # Re-opening an older file moves it back to the front of the recents.
+    s.for_file("/docs/f3.pdf")
+
+    recent = s.recent_files(limit=10)
+    assert len(recent) == 10
+    assert recent[0] == "/docs/f3.pdf"  # most recently opened
+    assert recent[1] == "/docs/f14.pdf"  # then the previous newest
+    assert "/docs/f0.pdf" not in recent  # trimmed beyond the limit

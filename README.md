@@ -17,6 +17,7 @@ per file, and are driven entirely from the keyboard.
 ## Features
 
 - Open by file picker, drag-and-drop (PWA), or `Open with` file handler (PWA).
+- Reopen one of the last 10 files from a popup (`Shift+O`).
 - Go to page; first/last; next/prev — vim-style paging.
 - Fit-to-width / fit-to-height / custom scale; zoom.
 - Pan with `h j k l` / arrows / touchpad.
@@ -31,6 +32,7 @@ per file, and are driven entirely from the keyboard.
 | Action | Keys |
 | --- | --- |
 | Open file | `o` (PWA: also drag-drop / *Open with*) |
+| Recent files (last 10) | `Shift+O` |
 | Go to page | `:` |
 | Table of contents | `c` |
 | Next page | `Ctrl-f`, `Ctrl-→`, `Space`, `PageDown` |

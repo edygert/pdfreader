@@ -15,6 +15,7 @@ const canvas = document.getElementById("page");
 const statusEl = document.getElementById("status");
 const helpEl = document.getElementById("help");
 const tocEl = document.getElementById("toc");
+const recentEl = document.getElementById("recent");
 const hintEl = document.getElementById("hint");
 const fileInput = document.getElementById("file-input");
 const installEl = document.getElementById("install");
@@ -239,6 +240,96 @@ function toggleToc() {
   else showToc();
 }
 
+// ---------- recent files popup ----------
+let recentItems = [];
+let recentSel = 0;
+
+const recentVisible = () => recentEl.classList.contains("show");
+const hideRecent = () => recentEl.classList.remove("show");
+
+function fmtSize(bytes) {
+  if (!bytes) return "";
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+async function showRecent() {
+  const all = await state.recentFiles(11);
+  const curKey = record ? record.key : null;
+  recentItems = all.filter((r) => r.key !== curKey).slice(0, 10);
+  if (!recentItems.length) {
+    recentEl.innerHTML =
+      `<div class="toc-card"><h2>Recent Files</h2>` +
+      `<p class="dim">No recent files yet. Press <kbd>o</kbd> to open a PDF.</p></div>`;
+    recentEl.classList.add("show");
+    return;
+  }
+  recentSel = 0;
+  renderRecent();
+  recentEl.classList.add("show");
+}
+
+function renderRecent() {
+  const rows = recentItems
+    .map((r, i) => {
+      const meta = r.handle ? fmtSize(r.size) : "re-pick";
+      return (
+        `<div class="recent-row${i === recentSel ? " sel" : ""}" data-i="${i}">` +
+        `<span class="recent-name">${escapeHtml(r.name)}</span>` +
+        `<span class="recent-meta">${meta}</span></div>`
+      );
+    })
+    .join("");
+  recentEl.innerHTML =
+    `<div class="toc-card"><h2>Recent Files</h2><div class="toc-list">${rows}</div></div>`;
+  recentEl.querySelectorAll(".recent-row").forEach((el) =>
+    el.addEventListener("click", () =>
+      openRecentItem(recentItems[parseInt(el.dataset.i, 10)])
+    )
+  );
+  const sel = recentEl.querySelector(".recent-row.sel");
+  if (sel) sel.scrollIntoView({ block: "nearest" });
+}
+
+function recentMove(delta) {
+  if (!recentItems.length) return;
+  recentSel = Math.min(Math.max(recentSel + delta, 0), recentItems.length - 1);
+  renderRecent();
+}
+
+// Reopen a remembered file. Needs the stored FileSystemFileHandle (and read
+// permission, which may prompt); without one — e.g. opened via the basic file
+// input — the browser won't re-read it, so fall back to the picker.
+async function openRecentItem(rec) {
+  hideRecent();
+  if (!rec) return;
+  const h = rec.handle;
+  if (h && h.getFile) {
+    try {
+      if (h.queryPermission) {
+        let perm = await h.queryPermission({ mode: "read" });
+        if (perm !== "granted" && h.requestPermission) {
+          perm = await h.requestPermission({ mode: "read" });
+        }
+        if (perm !== "granted") throw new Error("Read permission denied.");
+      }
+      const file = await h.getFile();
+      await openFile(file, h);
+      return;
+    } catch (err) {
+      alert(`Cannot reopen\n\n${rec.name}\n${err}`);
+      return;
+    }
+  }
+  alert(`"${rec.name}" can't be reopened automatically — open it from the picker.`);
+  openPicker();
+}
+
+function toggleRecent() {
+  if (recentVisible()) hideRecent();
+  else showRecent();
+}
+
 // ---------- UI text scaling (chrome only) ----------
 function applyUiScaleVar(s) {
   document.documentElement.style.setProperty("--ui-scale", s);
@@ -370,6 +461,18 @@ function onKeyDown(e) {
   const k = e.key;
   const ctrl = e.ctrlKey || e.metaKey;
 
+  // While the recent-files popup is open, keys navigate it (and nothing else).
+  if (recentVisible()) {
+    if (k === "Escape" || k === "O") return done(e, hideRecent);
+    if (k === "ArrowDown" || k === "j") return done(e, () => recentMove(1));
+    if (k === "ArrowUp" || k === "k") return done(e, () => recentMove(-1));
+    if (k === "Enter") return done(e, () => openRecentItem(recentItems[recentSel]));
+    if (k === "Home") return done(e, () => { recentSel = 0; renderRecent(); });
+    if (k === "End") return done(e, () => { recentSel = recentItems.length - 1; renderRecent(); });
+    if (!ctrl) e.preventDefault(); // swallow other keys so the page doesn't react
+    return;
+  }
+
   // While the contents popup is open, keys navigate it (and nothing else).
   if (tocVisible()) {
     if (k === "Escape" || k === "c") return done(e, hideToc);
@@ -395,6 +498,7 @@ function onKeyDown(e) {
 
   switch (k) {
     case "o": return done(e, openPicker);
+    case "O": return done(e, toggleRecent); // Shift+O: Open Recent
     case ":": return done(e, gotoDialog);
     case "g": return done(e, onGKey);
     case "G": return done(e, lastPage);
@@ -512,6 +616,9 @@ async function init() {
   helpEl.addEventListener("click", hideHelp);
   tocEl.addEventListener("click", (e) => {
     if (e.target === tocEl) hideToc(); // click the backdrop (not a row) to close
+  });
+  recentEl.addEventListener("click", (e) => {
+    if (e.target === recentEl) hideRecent(); // backdrop click closes
   });
 
   if ("serviceWorker" in navigator) {

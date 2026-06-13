@@ -154,8 +154,9 @@ body[data-page-theme="dark"] #viewport {
   max-width: 36em;
 }
 
-/* Table-of-contents overlay */
-#toc {
+/* Table-of-contents and recent-files overlays (shared card styling) */
+#toc,
+#recent {
   position: fixed;
   inset: 0;
   display: none;
@@ -165,7 +166,8 @@ body[data-page-theme="dark"] #viewport {
   z-index: 11;
   padding: 24px;
 }
-#toc.show {
+#toc.show,
+#recent.show {
   display: flex;
 }
 .toc-card {
@@ -215,6 +217,38 @@ body[data-page-theme="dark"] #viewport {
   color: var(--dim);
   padding: 8px;
   font-size: calc(14px * var(--ui-scale));
+}
+
+/* Recent-files rows: filename on the left, size/meta on the right. */
+.recent-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 8px;
+  font-size: calc(15px * var(--ui-scale));
+  color: #dddddd;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.recent-row:hover {
+  background: #37414e;
+}
+.recent-row.sel {
+  background: #3d6fa5;
+  color: #ffffff;
+}
+.recent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-meta {
+  color: #88aabb;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.recent-row.sel .recent-meta {
+  color: #cceeff;
 }
 
 kbd {

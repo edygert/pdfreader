@@ -15,6 +15,7 @@ class Shortcut:
 # Single source of truth: the viewer binds these and the help window lists them.
 SHORTCUTS: list[Shortcut] = [
     Shortcut("Open file", ["o"]),
+    Shortcut("Recent files", ["Shift O"]),
     Shortcut("Go to page", [":"]),
     Shortcut("Table of contents", ["c"]),
     Shortcut("Next page", ["Ctrl f", "Ctrl →", "Space", "PageDown"]),
@@ -36,7 +37,7 @@ SHORTCUTS: list[Shortcut] = [
 
 # Abbreviated one-line cheat sheet shown along the bottom of the window.
 CHEATS = (
-    "o open · : goto · Ctrl-f/b page · hjkl pan · "
+    "o open · O recent · : goto · Ctrl-f/b page · hjkl pan · "
     "W/H fit · f scale · +/- zoom · r/R rotate · ? help · q quit"
 )
 

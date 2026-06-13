@@ -118,6 +118,7 @@ default). File handling only works once the PWA is installed.
 | Action | Keys |
 | --- | --- |
 | Open file | `o`, drag-drop |
+| Recent files (last 10) | `Shift+O` |
 | Go to page | `:` |
 | Table of contents | `c` |
 | Next / previous page | `Ctrl-f` / `Ctrl-b` (also Space/PageDown, PageUp, Ctrl-→/←) |

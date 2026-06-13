@@ -3,6 +3,7 @@
 
 export const SHORTCUTS = [
   ["Open file", ["o", "drag-drop"]],
+  ["Recent files", ["Shift O"]],
   ["Go to page", [":"]],
   ["Table of contents", ["c"]],
   ["Next page", ["Ctrl f", "Ctrl →", "Space", "PageDown"]],
@@ -23,7 +24,7 @@ export const SHORTCUTS = [
 ];
 
 export const CHEATS =
-  "o open · : goto · Ctrl-f/b page · hjkl pan · " +
+  "o open · O recent · : goto · Ctrl-f/b page · hjkl pan · " +
   "W/H fit · f scale · +/- zoom · r/R rotate · ? help · q quit";
 
 export function helpHTML() {
