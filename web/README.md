@@ -54,6 +54,47 @@ deploying is just copying these static files to any static host.
 **GitHub Pages** or **Cloudflare Pages** work the same way — point them at the
 contents of `web/` so the files are served from the site root over HTTPS.
 
+### AWS S3 + CloudFront
+
+Two scripts here automate an S3 deploy fronted by CloudFront for HTTPS (plain S3
+website hosting is HTTP-only, which disables the service worker, install, and the
+File System Access picker). Set your bucket via `PDFREADER_BUCKET` (or the first
+argument); region defaults to `us-east-1` and the AWS CLI profile is taken from
+`AWS_PROFILE` (default credentials if unset).
+
+1. **One-time infra** — `bootstrap-aws.sh` (idempotent): creates the private
+   bucket, an Origin Access Control, a CloudFront distribution
+   (`redirect-to-https`, root object `index.html`, managed *CachingOptimized*
+   policy), and a bucket policy that lets only that distribution read the bucket.
+   It prints the distribution ID and the `https://<id>.cloudfront.net` URL.
+
+   ```bash
+   web/bootstrap-aws.sh <bucket>
+   ```
+
+   A custom domain is optional — without one the `*.cloudfront.net` URL is a
+   fully working PWA origin. For a custom domain, create and validate an ACM
+   cert **in us-east-1** first, then:
+
+   ```bash
+   DOMAIN=pdf.example.com ACM_CERT_ARN=arn:aws:acm:us-east-1:…:certificate/… \
+     web/bootstrap-aws.sh <bucket>
+   ```
+
+2. **Deploy the files** — `deploy.sh`: syncs `vendor/` and `icons/` cache-first
+   (1-year immutable) and the app shell network-first (`no-cache`), fixes the
+   `manifest.webmanifest` content type, and invalidates the app-shell paths at
+   CloudFront.
+
+   ```bash
+   web/deploy.sh <bucket> <distribution-id>
+   PDFREADER_CF_DIST=<id> web/deploy.sh <bucket>   # same, via env
+   DRY_RUN=1 web/deploy.sh <bucket> <id>           # preview the sync, upload nothing
+   ```
+
+   Re-run `deploy.sh` for every release. When you change vendored PDF.js or
+   icons, also bump the `CACHE` constant in `sw.js` (see below).
+
 ## Updating a deployed install
 
 The app is served by a **service worker**, so a redeploy doesn't reach the installed
