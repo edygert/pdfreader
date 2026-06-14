@@ -28,7 +28,8 @@ body {
 }
 
 /* Scrolling page area; canvas centers horizontally but stays reachable when
-   wider than the viewport (safe center). */
+   wider than the viewport (safe center). touch-action keeps native one-finger
+   panning while setupTouch() owns multi-touch (pinch) and swipe page-turns. */
 #viewport {
   flex: 1 1 auto;
   overflow: auto;
@@ -36,6 +37,7 @@ body {
   display: flex;
   justify-content: safe center;
   align-items: flex-start;
+  touch-action: pan-x pan-y;
 }
 
 #page {
@@ -85,6 +87,90 @@ body[data-page-theme="dark"] #viewport {
   overflow: hidden;
   text-overflow: ellipsis;
   border-top: 1px solid #000;
+}
+
+/* Touch toolbar — a floating pill above the status line. Hidden by default and
+   revealed via .show (center tap, or auto-shown when no document is open). It
+   overlays (position: fixed) so it never reshapes the #viewport render area,
+   and it's purely additive: mouse/keyboard users can ignore it. */
+#toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%) translateY(12px);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 96vw;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 6px;
+  background: rgba(43, 43, 43, 0.96);
+  border: 1px solid #444;
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  z-index: 8; /* below the TOC/Recent/Help overlays (10–11) so they cover it */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#toolbar.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+#toolbar button {
+  min-width: calc(44px * var(--ui-scale));
+  height: calc(44px * var(--ui-scale));
+  padding: 0 10px;
+  font-size: calc(18px * var(--ui-scale));
+  color: var(--fg);
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+}
+#toolbar button:hover {
+  background: #37414e;
+}
+#toolbar button:active {
+  background: #3d6fa5;
+}
+#tb-page {
+  font-size: calc(14px * var(--ui-scale)) !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tb-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: #555;
+}
+
+/* Overflow menu for the less-used actions. */
+#tb-more {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 6px;
+  background: rgba(43, 43, 43, 0.98);
+  border: 1px solid #444;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+#tb-more.show {
+  display: flex;
+}
+#tb-more button {
+  width: 100%;
+  height: calc(44px * var(--ui-scale));
+  justify-content: flex-start;
+  text-align: left;
+  font-size: calc(15px * var(--ui-scale));
 }
 
 /* Install button — shown only when the browser reports the app is installable. */

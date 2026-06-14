@@ -13,10 +13,35 @@
     <main id="viewport">
       <canvas id="page"></canvas>
       <div id="hint">
-        Press <kbd>o</kbd> to open a PDF &nbsp;·&nbsp; or drag one here
-        &nbsp;·&nbsp; <kbd>?</kbd> for help
+        Tap <b>Open</b> below, press <kbd>o</kbd>, or drag a PDF here
+        &nbsp;·&nbsp; tap <b>?</b> or press <kbd>?</kbd> for help
       </div>
     </main>
+
+    <!-- Touch toolbar: every button calls the same function as its keyboard
+         shortcut, so a keyboard is never required (e.g. on iPad). Auto-hides
+         while reading; a center tap toggles it. -->
+    <nav id="toolbar" aria-label="Toolbar">
+      <button data-act="open" type="button" aria-label="Open file" title="Open file (o)">📂</button>
+      <button data-act="recent" type="button" aria-label="Recent files" title="Recent files (Shift+O)">🕘</button>
+      <span class="tb-sep"></span>
+      <button data-act="prev" type="button" aria-label="Previous page" title="Previous page">◀</button>
+      <button id="tb-page" data-act="goto" type="button" aria-label="Go to page" title="Go to page (:)">– / –</button>
+      <button data-act="next" type="button" aria-label="Next page" title="Next page">▶</button>
+      <span class="tb-sep"></span>
+      <button data-act="zoomout" type="button" aria-label="Zoom out" title="Zoom out (-)">−</button>
+      <button data-act="zoomin" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button>
+      <button data-act="fitwidth" type="button" aria-label="Fit width" title="Fit width (Shift+W)">↔</button>
+      <span class="tb-sep"></span>
+      <button data-act="more" type="button" aria-label="More" title="More" aria-expanded="false">⋯</button>
+      <div id="tb-more" role="menu" aria-label="More actions">
+        <button data-act="fitheight" type="button" role="menuitem">Fit height</button>
+        <button data-act="rotate" type="button" role="menuitem">Rotate</button>
+        <button data-act="toc" type="button" role="menuitem">Contents</button>
+        <button data-act="theme" type="button" role="menuitem">Page color</button>
+        <button data-act="help" type="button" role="menuitem">Help</button>
+      </div>
+    </nav>
 
     <button id="install" type="button">⬇ Install app</button>
     <div id="status"></div>

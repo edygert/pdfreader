@@ -133,4 +133,23 @@ default). File handling only works once the PWA is installed.
 | Help | `?` / `F1` |
 | Close | `q` |
 
+## Touch controls
+
+No keyboard required (e.g. on iPad). All gestures act on the page area:
+
+| Gesture | Action |
+| --- | --- |
+| Tap the center | Show / hide the toolbar |
+| Tap the left / right edge | Previous / next page |
+| Swipe ◀ / ▶ | Previous / next page |
+| Pinch in / out | Zoom |
+| Drag (one finger) | Pan, when the page is zoomed past the window |
+
+The toolbar holds every other action (open, recent, go-to-page, zoom, fit,
+rotate, contents, page color, help); less-used items live under the **⋯** menu.
+It's shown at startup so **Open** is reachable, then auto-hides while reading —
+tap the center to bring it back. When the page is zoomed wider than the window,
+horizontal drags pan instead of turning pages, so swipe/edge-tap page-turns
+pause until you fit the page again.
+
 [PDF.js]: https://mozilla.github.io/pdf.js/

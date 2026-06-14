@@ -19,6 +19,9 @@ const recentEl = document.getElementById("recent");
 const hintEl = document.getElementById("hint");
 const fileInput = document.getElementById("file-input");
 const installEl = document.getElementById("install");
+const toolbarEl = document.getElementById("toolbar");
+const tbPageEl = document.getElementById("tb-page");
+const tbMoreEl = document.getElementById("tb-more");
 
 // ---- session state ----
 let doc = null;
@@ -153,8 +156,10 @@ function setStatus(text) {
 function updateStatus() {
   if (!doc) {
     setStatus(`No document open        ${CHEATS}`);
+    if (tbPageEl) tbPageEl.textContent = "– / –";
     return;
   }
+  if (tbPageEl) tbPageEl.textContent = `${page + 1} / ${doc.pageCount}`;
   const pct = Math.round(lastScale * 100);
   let scaleText;
   if (record.scaleMode === FIT_WIDTH) scaleText = `Fit width (${pct}%)`;
@@ -402,6 +407,7 @@ async function openFile(file, handle) {
   hintEl.classList.add("hidden");
   document.title = `${file.name} — pdfreader`;
   await renderCurrent();
+  showToolbar(); // briefly show controls, then auto-hide while reading
   save();
 }
 
@@ -591,6 +597,170 @@ function setupInstall() {
   );
 }
 
+// ---------- touch toolbar ----------
+// On-screen controls so the app is fully usable without a keyboard (e.g. iPad).
+// Each button just calls the same function as its keyboard shortcut.
+let toolbarHideJob = null;
+
+function showToolbar(autoHide = true) {
+  toolbarEl.classList.add("show");
+  clearTimeout(toolbarHideJob);
+  // Auto-hide only while reading; keep it up when no file is open so the Open
+  // button stays reachable.
+  if (autoHide && doc) toolbarHideJob = setTimeout(hideToolbar, 3500);
+}
+
+function hideToolbar() {
+  clearTimeout(toolbarHideJob);
+  toolbarEl.classList.remove("show");
+  closeMore();
+}
+
+function toggleToolbar() {
+  if (toolbarEl.classList.contains("show")) hideToolbar();
+  else showToolbar();
+}
+
+function closeMore() {
+  tbMoreEl.classList.remove("show");
+  const moreBtn = toolbarEl.querySelector('[data-act="more"]');
+  if (moreBtn) moreBtn.setAttribute("aria-expanded", "false");
+}
+
+const TOOLBAR_ACTIONS = {
+  open: openPicker,
+  recent: toggleRecent,
+  prev: prevPage,
+  next: nextPage,
+  goto: gotoDialog,
+  zoomout: zoomOut,
+  zoomin: zoomIn,
+  fitwidth: fitWidth,
+  fitheight: fitHeight,
+  rotate: rotateCW,
+  toc: toggleToc,
+  theme: cyclePageTheme,
+  help: toggleHelp,
+};
+
+function setupToolbar() {
+  toolbarEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === "more") {
+      const open = tbMoreEl.classList.toggle("show");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      showToolbar(); // keep the bar up while the menu is open
+      return;
+    }
+    const fn = TOOLBAR_ACTIONS[act];
+    if (fn) fn();
+    closeMore();
+    if (doc) showToolbar(); // refresh the auto-hide timer after acting
+  });
+}
+
+// ---------- touch gestures ----------
+function touchDist(a, b) {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
+
+function setupTouch() {
+  const TAP_MOVE = 10; // px: max movement to still count as a tap
+  const TAP_TIME = 300; // ms: max duration for a tap
+  const SWIPE_MIN = 60; // px: min horizontal travel for a swipe page-turn
+
+  let startX = 0, startY = 0, startT = 0;
+  let moved = false;
+  let mode = null; // null | "drag" (1 finger) | "pinch" (2 fingers)
+  let pinchStartDist = 0;
+  let pinchStartFactor = 1;
+  let pinchRatio = 1;
+
+  // True when the page is wider than the viewport: horizontal drags must pan
+  // (native scroll), so we don't steal them for page-turns.
+  const hScrollable = () => viewportEl.scrollWidth > viewportEl.clientWidth + 1;
+
+  viewportEl.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 2) {
+      mode = "pinch";
+      pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+      pinchRatio = 1;
+      currentFactor().then((f) => (pinchStartFactor = f));
+      e.preventDefault();
+      return;
+    }
+    if (e.touches.length === 1) {
+      mode = "drag";
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      startT = e.timeStamp;
+      moved = false;
+    }
+  }, { passive: false });
+
+  viewportEl.addEventListener("touchmove", (e) => {
+    if (mode === "pinch" && e.touches.length === 2) {
+      e.preventDefault(); // own the gesture; don't let the browser zoom/scroll
+      const d = touchDist(e.touches[0], e.touches[1]);
+      if (pinchStartDist > 0) {
+        pinchRatio = Math.max(0.2, Math.min(d / pinchStartDist, 8));
+        // Cheap live preview; the real re-render commits on touchend.
+        canvas.style.transformOrigin = "center center";
+        canvas.style.transform = `scale(${pinchRatio})`;
+      }
+      return;
+    }
+    if (mode === "drag" && e.touches.length === 1) {
+      const t = e.touches[0];
+      if (Math.abs(t.clientX - startX) > TAP_MOVE ||
+          Math.abs(t.clientY - startY) > TAP_MOVE) {
+        moved = true; // native scroll handles the actual panning
+      }
+    }
+  }, { passive: false });
+
+  viewportEl.addEventListener("touchend", (e) => {
+    if (mode === "pinch") {
+      const ratio = pinchRatio;
+      canvas.style.transform = "";
+      if (doc && Math.abs(ratio - 1) > 0.02) setCustom(pinchStartFactor * ratio);
+      if (e.touches.length === 0) mode = null;
+      return;
+    }
+    if (mode !== "drag") return;
+    mode = null;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    const dt = e.timeStamp - startT;
+
+    // Tap: little movement, quick. Edge zones turn pages (when not panning a
+    // wide page); the center toggles the toolbar.
+    if (!moved && dt < TAP_TIME) {
+      const w = viewportEl.clientWidth;
+      const x = t.clientX;
+      e.preventDefault(); // suppress the synthesized click / ghost tap
+      if (!hScrollable() && x < w * 0.25) prevPage();
+      else if (!hScrollable() && x > w * 0.75) nextPage();
+      else toggleToolbar();
+      return;
+    }
+    // Horizontal swipe → page turn, unless the page is panning horizontally.
+    if (!hScrollable() && Math.abs(dx) > SWIPE_MIN && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) nextPage();
+      else prevPage();
+    }
+  }, { passive: false });
+
+  // iOS Safari pinch fallback — scoped to the viewport only, so the rest of the
+  // page and non-iOS platforms are unaffected.
+  viewportEl.addEventListener("gesturestart", (e) => e.preventDefault());
+  viewportEl.addEventListener("gesturechange", (e) => e.preventDefault());
+}
+
 // ---------- init ----------
 async function init() {
   applyUiScaleVar(1);
@@ -602,6 +772,9 @@ async function init() {
 
   window.addEventListener("keydown", onKeyDown);
   setupDnD();
+  setupToolbar();
+  setupTouch();
+  showToolbar(false); // visible at the empty state so Open is reachable
   fileInput.addEventListener("change", () => {
     const f = fileInput.files[0];
     if (f) openFile(f, null);

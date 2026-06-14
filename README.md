@@ -68,6 +68,11 @@ The PWA opens files via the picker (`o`), drag-and-drop, or the OS *Open with â†
 pdfreader* file handler (each file in its own window). It does not auto-resume a
 previous file. State lives in IndexedDB (per-file) and `localStorage` (theme).
 
+On touch devices (e.g. iPad) the PWA needs no keyboard: an on-screen toolbar
+exposes every action, tapping the screen's left/right edge or swiping turns
+pages, a center tap shows/hides the toolbar, and pinch zooms. See
+[web/README.md](web/README.md#touch-controls).
+
 ## Standalone desktop app
 
 Built with Tkinter + Pillow + pypdfium2. Tkinter renders over X11/XWayland, which
