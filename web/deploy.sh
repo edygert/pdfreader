@@ -18,6 +18,8 @@
 # Config (env overrides, then positional args):
 #   PDFREADER_BUCKET   S3 bucket name                 (required)
 #   PDFREADER_CF_DIST  CloudFront distribution id     (optional; enables invalidation)
+#   PDFREADER_PREFIX   key prefix for path-based hosting, e.g. "pdfreader"
+#                      (optional; default root). Hosts the app at /<prefix>/.
 #   AWS_REGION         default: us-east-1
 #   AWS_PROFILE        AWS CLI profile (optional; uses default credentials if unset)
 #   DRY_RUN=1          show what would change, upload nothing
@@ -30,6 +32,11 @@ BUCKET="${PDFREADER_BUCKET:-${1:-}}"
 DISTRIBUTION_ID="${PDFREADER_CF_DIST:-${2:-}}"
 REGION="${AWS_REGION:-us-east-1}"
 PROFILE="${AWS_PROFILE:-}"
+# Optional key prefix for path-based hosting (e.g. pdfreader -> /pdfreader/).
+PREFIX="${PDFREADER_PREFIX:-}"
+PREFIX="${PREFIX#/}" ; PREFIX="${PREFIX%/}"            # strip surrounding slashes
+DEST_SUFFIX="${PREFIX:+$PREFIX/}"                       # "" at root, "pdfreader/" otherwise
+URL_PREFIX="${PREFIX:+/$PREFIX}"                        # "" at root, "/pdfreader" otherwise
 
 if [[ -z "$BUCKET" ]]; then
   echo "error: S3 bucket required (pass as \$1 or set PDFREADER_BUCKET)" >&2
@@ -47,13 +54,13 @@ SYNC_OPTS=()
 # Never upload the scripts themselves or the README to the public site.
 COMMON_EXCLUDES=(--exclude ".DS_Store" --exclude "deploy.sh" --exclude "bootstrap-aws.sh" --exclude "README.md")
 
-echo "==> Deploying $WEB_DIR -> s3://$BUCKET  (region=$REGION${PROFILE:+ profile=$PROFILE})"
+echo "==> Deploying $WEB_DIR -> s3://$BUCKET/${DEST_SUFFIX}  (region=$REGION${PROFILE:+ profile=$PROFILE})"
 
 # Pass 1: immutable assets (vendor/, icons/) with a long, immutable cache.
-# --delete is scoped by the include filters, so it only prunes removed
-# vendor/icons objects — top-level app files are excluded and left untouched.
+# --delete is scoped by the include filters and the prefix, so it only prunes
+# removed vendor/icons objects under this app's prefix.
 echo "==> [1/3] vendor/ + icons/  (cache-first, 1-year immutable)"
-"${AWS[@]}" s3 sync "$WEB_DIR/" "s3://$BUCKET/" --delete \
+"${AWS[@]}" s3 sync "$WEB_DIR/" "s3://$BUCKET/${DEST_SUFFIX}" --delete \
   "${SYNC_OPTS[@]}" \
   --exclude "*" --include "vendor/*" --include "icons/*" \
   --cache-control "public, max-age=31536000, immutable"
@@ -61,7 +68,7 @@ echo "==> [1/3] vendor/ + icons/  (cache-first, 1-year immutable)"
 # Pass 2: app shell with no-cache. --delete here prunes removed app files but
 # excludes vendor/icons so it can't touch what pass 1 manages.
 echo "==> [2/3] app shell  (network-first, no-cache)"
-"${AWS[@]}" s3 sync "$WEB_DIR/" "s3://$BUCKET/" --delete \
+"${AWS[@]}" s3 sync "$WEB_DIR/" "s3://$BUCKET/${DEST_SUFFIX}" --delete \
   "${SYNC_OPTS[@]}" \
   "${COMMON_EXCLUDES[@]}" \
   --exclude "vendor/*" --exclude "icons/*" \
@@ -71,7 +78,7 @@ echo "==> [2/3] app shell  (network-first, no-cache)"
 if [[ "${DRY_RUN:-}" != "1" ]]; then
   echo "==> [3/3] manifest Content-Type -> application/manifest+json"
   "${AWS[@]}" s3 cp \
-    "s3://$BUCKET/manifest.webmanifest" "s3://$BUCKET/manifest.webmanifest" \
+    "s3://$BUCKET/${DEST_SUFFIX}manifest.webmanifest" "s3://$BUCKET/${DEST_SUFFIX}manifest.webmanifest" \
     --metadata-directive REPLACE \
     --content-type "application/manifest+json" \
     --cache-control "no-cache"
@@ -83,10 +90,14 @@ fi
 # vendor/icons assets are intentionally left cached.
 if [[ -n "$DISTRIBUTION_ID" && "${DRY_RUN:-}" != "1" ]]; then
   echo "==> CloudFront invalidation ($DISTRIBUTION_ID)"
+  # Invalidate the network-first app shell under this app's path (plus the
+  # bare prefix + trailing-slash entry points handled by the dir-index function).
   "${AWS[@]}" cloudfront create-invalidation \
     --distribution-id "$DISTRIBUTION_ID" \
-    --paths "/" "/index.html" "/sw.js" "/app.js" "/styles.css" \
-            "/pdf.js" "/state.js" "/shortcuts.js" "/manifest.webmanifest" \
+    --paths "${URL_PREFIX:-/}" "$URL_PREFIX/" "$URL_PREFIX/index.html" \
+            "$URL_PREFIX/sw.js" "$URL_PREFIX/app.js" "$URL_PREFIX/styles.css" \
+            "$URL_PREFIX/pdf.js" "$URL_PREFIX/state.js" "$URL_PREFIX/shortcuts.js" \
+            "$URL_PREFIX/manifest.webmanifest" \
     --query 'Invalidation.{Id:Id,Status:Status}' --output table
 elif [[ -z "$DISTRIBUTION_ID" ]]; then
   echo "==> No CloudFront distribution id given — skipping invalidation."
