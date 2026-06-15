@@ -95,6 +95,29 @@ argument); region defaults to `us-east-1` and the AWS CLI profile is taken from
    Re-run `deploy.sh` for every release. When you change vendored PDF.js or
    icons, also bump the `CACHE` constant in `sw.js` (see below).
 
+#### Path-based hosting (multiple apps on one domain)
+
+One bucket + one distribution can host many apps, each under its own path
+prefix, e.g. `https://apps.example.com/pdfreader/`. Deploy with
+`PDFREADER_PREFIX` (the app uses relative paths, so it runs fine under a subpath,
+and each app gets its own service-worker scope):
+
+```bash
+PDFREADER_PREFIX=pdfreader web/deploy.sh <bucket> <distribution-id>
+```
+
+This requires one piece of CloudFront config, because an OAC (S3 REST) origin
+has no "index document" behavior: a **CloudFront Function** on *viewer-request*
+that rewrites `…/` → `…/index.html` and 301-redirects extensionless paths to add
+a trailing slash (so relative URLs resolve under the app's directory). The
+bucket root can hold a small landing page listing the apps — see
+[`apps-root/index.html`](../apps-root/index.html):
+
+```bash
+aws s3 cp apps-root/index.html s3://<bucket>/index.html \
+  --content-type text/html --cache-control no-cache
+```
+
 ## Updating a deployed install
 
 The app is served by a **service worker**, so a redeploy doesn't reach the installed
