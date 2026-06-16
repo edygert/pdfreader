@@ -19,6 +19,7 @@ const helpEl = document.getElementById("help");
 const tocEl = document.getElementById("toc");
 const recentEl = document.getElementById("recent");
 const hintEl = document.getElementById("hint");
+const noticeEl = document.getElementById("notice");
 const fileInput = document.getElementById("file-input");
 const installEl = document.getElementById("install");
 const toolbarEl = document.getElementById("toolbar");
@@ -73,15 +74,25 @@ async function renderCurrent() {
 
 // Build the selectable text overlay and swap it in, but only if this is still
 // the latest render. Failure is non-fatal — the page is readable without it.
+// Pages whose text is glyph-index garbage (no Unicode mapping) get no layer at
+// all — selecting them would copy nonsense and behave erratically — plus a
+// notice explaining why.
 async function renderTextLayer(seq, scale) {
-  let built;
+  let res;
   try {
-    built = await doc.renderText(page, scale, record.rotation || 0);
+    res = await doc.renderText(page, scale, record.rotation || 0);
   } catch (err) {
     if (seq === renderSeq) console.error("text layer:", err);
     return;
   }
   if (seq !== renderSeq) return; // superseded while building; discard
+  if (!res.copyable) {
+    textLayerEl.replaceChildren(); // no selectable text on this page
+    setNoCopyNotice(true);
+    return;
+  }
+  setNoCopyNotice(false);
+  const built = res.container;
   built.id = "text-layer";
   built.style.setProperty("--scale-factor", scale);
   textLayerEl.replaceWith(built);
@@ -191,6 +202,11 @@ function updateStatus() {
     `${record.name}    ·    Page ${page + 1} / ${doc.pageCount}` +
       `    ·    ${scaleText}${rot}        ${CHEATS}`
   );
+}
+
+// Banner shown while the current page has no copyable text layer.
+function setNoCopyNotice(on) {
+  noticeEl.classList.toggle("show", on);
 }
 
 function toggleHelp() {

@@ -1,6 +1,6 @@
 [project]
 name = "pdfreader"
-version = "0.5.1"
+version = "0.5.2"
 description = "A fast, minimal, keyboard-driven standalone PDF reader"
 readme = "README.md"
 license = { text = "MIT" }
