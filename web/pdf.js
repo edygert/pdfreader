@@ -3,6 +3,7 @@
 
 import * as pdfjsLib from "./vendor/pdfjs/pdf.js";
 
+const { TextLayer } = pdfjsLib;
 const VENDOR = new URL("./vendor/pdfjs/", import.meta.url);
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdf.worker.js", VENDOR).href;
 
@@ -60,6 +61,23 @@ export class PdfDoc {
     this._task = page.render({ canvasContext: ctx, viewport, transform });
     await this._task.promise;
     return { width: viewport.width, height: viewport.height };
+  }
+
+  // Build a selectable text overlay for page `index` matching a render() at the
+  // same `scale`/`rotation`. Returns a *detached* <div class="textLayer"> of
+  // absolutely-positioned transparent spans the browser can select and copy;
+  // the caller sets `--scale-factor` (= scale) on it and swaps it into the DOM.
+  // Built detached (not into a shared node) so overlapping renders can't
+  // interleave their spans — only the latest result gets swapped in.
+  async renderText(index, scale, rotation = 0) {
+    const page = await this._page(index);
+    const viewport = page.getViewport({ scale, rotation: page.rotate + rotation });
+    const source = await page.getTextContent();
+    const container = document.createElement("div");
+    container.className = "textLayer";
+    const layer = new TextLayer({ textContentSource: source, container, viewport });
+    await layer.render();
+    return container;
   }
 
   // Resolve a PDF destination (named or explicit) to a 0-based page index.

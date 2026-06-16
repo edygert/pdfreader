@@ -11,7 +11,9 @@ const PAN_STEP = 60; // px per arrow/hjkl pan
 
 // ---- DOM ----
 const viewportEl = document.getElementById("viewport");
+const pageWrapEl = document.getElementById("page-wrap");
 const canvas = document.getElementById("page");
+let textLayerEl = document.getElementById("text-layer");
 const statusEl = document.getElementById("status");
 const helpEl = document.getElementById("help");
 const tocEl = document.getElementById("toc");
@@ -53,6 +55,7 @@ async function renderCurrent() {
   if (!doc) return;
   const seq = ++renderSeq;
   doc.cancel();
+  textLayerEl.replaceChildren(); // drop the stale selection layer immediately
   const scale = await effectiveScale();
   lastScale = scale;
   const dpr = window.devicePixelRatio || 1;
@@ -65,6 +68,24 @@ async function renderCurrent() {
   }
   if (seq !== renderSeq) return; // a newer render superseded this one
   updateStatus();
+  await renderTextLayer(seq, scale);
+}
+
+// Build the selectable text overlay and swap it in, but only if this is still
+// the latest render. Failure is non-fatal — the page is readable without it.
+async function renderTextLayer(seq, scale) {
+  let built;
+  try {
+    built = await doc.renderText(page, scale, record.rotation || 0);
+  } catch (err) {
+    if (seq === renderSeq) console.error("text layer:", err);
+    return;
+  }
+  if (seq !== renderSeq) return; // superseded while building; discard
+  built.id = "text-layer";
+  built.style.setProperty("--scale-factor", scale);
+  textLayerEl.replaceWith(built);
+  textLayerEl = built;
 }
 
 async function setCustom(factor) {
@@ -707,9 +728,10 @@ function setupTouch() {
       const d = touchDist(e.touches[0], e.touches[1]);
       if (pinchStartDist > 0) {
         pinchRatio = Math.max(0.2, Math.min(d / pinchStartDist, 8));
-        // Cheap live preview; the real re-render commits on touchend.
-        canvas.style.transformOrigin = "center center";
-        canvas.style.transform = `scale(${pinchRatio})`;
+        // Cheap live preview; the real re-render commits on touchend. Scale the
+        // wrap (canvas + text overlay together) so they stay aligned.
+        pageWrapEl.style.transformOrigin = "center center";
+        pageWrapEl.style.transform = `scale(${pinchRatio})`;
       }
       return;
     }
@@ -725,7 +747,7 @@ function setupTouch() {
   viewportEl.addEventListener("touchend", (e) => {
     if (mode === "pinch") {
       const ratio = pinchRatio;
-      canvas.style.transform = "";
+      pageWrapEl.style.transform = "";
       if (doc && Math.abs(ratio - 1) > 0.02) setCustom(pinchStartFactor * ratio);
       if (e.touches.length === 0) mode = null;
       return;
