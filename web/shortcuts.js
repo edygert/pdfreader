@@ -54,6 +54,7 @@ export function helpHTML() {
     <h2>Touch</h2>
     <table>${touchRows}</table>
     <p class="dim">Arrow keys / hjkl pan when the page is zoomed past the window.
+    Select text with the mouse; <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> <kbd>C</kbd> copies it.
     Press <kbd>?</kbd> or <kbd>Esc</kbd> to close.</p>
   </div>`;
 }

@@ -40,8 +40,61 @@ body {
   touch-action: pan-x pan-y;
 }
 
+/* Holds the canvas and the (absolutely-positioned) selectable text overlay,
+   sized to the canvas so the overlay lines up exactly. */
+#page-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  line-height: 0; /* no stray gap beneath the inline-block canvas */
+}
+
 #page {
   display: block;
+}
+
+/* Selectable text overlay (PDF.js text layer): transparent glyphs positioned
+   over the rendered canvas, so the browser handles selection + Ctrl/Cmd-C copy.
+   PDF.js sizes the layer via --scale-factor (set per-render in app.js). */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 1;
+  touch-action: pan-x pan-y; /* match #viewport: one-finger pan, not select */
+}
+.textLayer span {
+  position: absolute;
+  white-space: pre;
+  color: transparent;
+  cursor: text;
+  transform-origin: 0 0;
+}
+.textLayer br {
+  position: absolute;
+}
+.textLayer span.markedContent {
+  top: 0;
+  height: 0;
+}
+/* Rotation: PDF.js lays the text out against the un-rotated page and tags the
+   layer with the display rotation; spin it into place over the rotated canvas. */
+.textLayer[data-main-rotation="90"] {
+  transform: rotate(90deg) translateY(-100%);
+}
+.textLayer[data-main-rotation="180"] {
+  transform: rotate(180deg) translate(-100%, -100%);
+}
+.textLayer[data-main-rotation="270"] {
+  transform: rotate(270deg) translateX(-100%);
+}
+.textLayer ::selection {
+  background: rgba(127, 209, 255, 0.4);
 }
 
 /* Page color themes (global). Applied as a filter on the rendered page, plus a
