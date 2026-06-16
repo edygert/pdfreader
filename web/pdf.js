@@ -13,6 +13,11 @@ export class PdfDoc {
     const task = pdfjsLib.getDocument({
       data,
       standardFontDataUrl: new URL("standard_fonts/", VENDOR).href,
+      // CMaps let PDF.js map CID-keyed CJK fonts (Simplified GB1, Traditional
+      // CNS1, JP, KR) to Unicode, so selected text copies correctly. Rendering
+      // works without them; text extraction does not.
+      cMapUrl: new URL("cmaps/", VENDOR).href,
+      cMapPacked: true,
     });
     const doc = await task.promise;
     return new PdfDoc(doc);

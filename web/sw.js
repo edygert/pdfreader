@@ -9,7 +9,7 @@
 // Every branch is guarded so the handler can't reject and strand a navigation
 // with ERR_FAILED.
 
-const CACHE = "pdfreader-v4";
+const CACHE = "pdfreader-v5";
 
 // Seed the cache so the very first offline launch has everything.
 const CORE = [
