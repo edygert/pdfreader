@@ -7,6 +7,46 @@ const { TextLayer } = pdfjsLib;
 const VENDOR = new URL("./vendor/pdfjs/", import.meta.url);
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdf.worker.js", VENDOR).href;
 
+// Heuristic: is a page's extracted text real, copyable Unicode — or glyph-index
+// garbage? PDFs whose fonts use Identity-H encoding with no ToUnicode map (a
+// common CJK case) yield text that renders fine but extracts as nonsense: the
+// codes are raw glyph indices, so they land on scattered, unrelated scripts and
+// C0/C1 control codes. Building a text layer from that gives garbage copies and
+// erratic selection (the junk includes RTL + combining chars), so we detect it
+// and skip the layer instead. Thresholds calibrated on known good (Latin + CJK)
+// and bad PDFs: garbage pages show ctrl ratio ~0.16+ and 7-9 distinct scripts;
+// good pages show ~0 control codes and 1-2 scripts.
+const COPY_SCRIPTS = ["Latin", "Han", "Hiragana", "Katakana", "Hangul",
+  "Bopomofo", "Cyrillic", "Greek", "Arabic", "Hebrew", "Devanagari",
+  "Armenian", "Thai"];
+const COPY_SCRIPT_RES = COPY_SCRIPTS.map((s) => [s, new RegExp(`\\p{Script=${s}}`, "u")]);
+const COPY_LETTER = /\p{L}/u;
+
+function scriptOf(ch) {
+  for (const [name, re] of COPY_SCRIPT_RES) if (re.test(ch)) return name;
+  return "Other";
+}
+
+function isCopyableText(text) {
+  let visible = 0;
+  let control = 0;
+  const scriptCounts = Object.create(null);
+  for (const ch of text) {
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r") continue;
+    const cp = ch.codePointAt(0);
+    visible++;
+    if (cp < 0x20 || (cp >= 0x7f && cp <= 0x9f) || cp === 0xfffd) control++;
+    if (COPY_LETTER.test(ch)) {
+      const s = scriptOf(ch);
+      scriptCounts[s] = (scriptCounts[s] || 0) + 1;
+    }
+  }
+  if (visible < 16) return true; // too little text to judge — assume fine
+  const controlRatio = control / visible;
+  const distinctScripts = Object.values(scriptCounts).filter((c) => c >= 3).length;
+  return !(controlRatio > 0.08 || distinctScripts >= 4);
+}
+
 export class PdfDoc {
   static async open(data) {
     // data: ArrayBuffer. PDF.js may detach it; we keep the parsed doc, not data.
@@ -69,20 +109,27 @@ export class PdfDoc {
   }
 
   // Build a selectable text overlay for page `index` matching a render() at the
-  // same `scale`/`rotation`. Returns a *detached* <div class="textLayer"> of
-  // absolutely-positioned transparent spans the browser can select and copy;
-  // the caller sets `--scale-factor` (= scale) on it and swaps it into the DOM.
-  // Built detached (not into a shared node) so overlapping renders can't
-  // interleave their spans — only the latest result gets swapped in.
+  // same `scale`/`rotation`. Returns { copyable, container }:
+  //   - copyable false  -> the page's text is glyph-index garbage (see
+  //     isCopyableText); container is null and the caller should skip selection.
+  //   - copyable true   -> container is a *detached* <div class="textLayer"> of
+  //     absolutely-positioned transparent spans the browser can select and copy;
+  //     the caller sets `--scale-factor` (= scale) on it and swaps it into the
+  //     DOM. Built detached (not into a shared node) so overlapping renders
+  //     can't interleave their spans — only the latest result gets swapped in.
   async renderText(index, scale, rotation = 0) {
     const page = await this._page(index);
-    const viewport = page.getViewport({ scale, rotation: page.rotate + rotation });
     const source = await page.getTextContent();
+    const text = source.items
+      .map((it) => (it.str === undefined ? "" : it.str))
+      .join("");
+    if (!isCopyableText(text)) return { copyable: false, container: null };
+    const viewport = page.getViewport({ scale, rotation: page.rotate + rotation });
     const container = document.createElement("div");
     container.className = "textLayer";
     const layer = new TextLayer({ textContentSource: source, container, viewport });
     await layer.render();
-    return container;
+    return { copyable: true, container };
   }
 
   // Resolve a PDF destination (named or explicit) to a 0-based page index.

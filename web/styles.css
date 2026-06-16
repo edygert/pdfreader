@@ -129,6 +129,29 @@ body[data-page-theme="dark"] #viewport {
   display: none;
 }
 
+/* Shown when the current page's text can't be extracted as Unicode (so it's not
+   selectable/copyable). Unobtrusive pill at the top; never blocks interaction. */
+#notice {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  max-width: 92vw;
+  color: #ffe2a8;
+  font-size: calc(13px * var(--ui-scale));
+  background: rgba(70, 50, 12, 0.92);
+  border: 1px solid #6b531d;
+  padding: 7px 14px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 9;
+}
+#notice.show {
+  display: block;
+}
+
 /* Bottom status line: filename · page · scale · cheats (single line). */
 #status {
   flex: 0 0 auto;
