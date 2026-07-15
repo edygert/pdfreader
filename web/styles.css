@@ -20,7 +20,9 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100vh; /* fallback for browsers without dvh */
+  height: 100dvh; /* track the *visible* area so the box settles as the mobile
+                     address bar shows/hides, instead of overshooting to 100vh */
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui, "Segoe UI", Roboto, sans-serif;
@@ -81,6 +83,21 @@ body {
 .textLayer span.markedContent {
   top: 0;
   height: 0;
+}
+/* PDF.js appends a throwaway <canvas class="hiddenCanvasElement"> to <body> to
+   measure text while building the text layer. Its own viewer stylesheet hides
+   this class; we don't ship that CSS, so without this rule the canvas lands as
+   an in-flow block and, as a flex sibling of #viewport, steals vertical space —
+   collapsing the reading pane to a thin strip ("shortened page"). Take it fully
+   out of flow. It only appears after the (async) text layer renders and not on
+   no-text pages, which is why the squeeze was intermittent. */
+canvas.hiddenCanvasElement {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  display: none;
 }
 /* Rotation: PDF.js lays the text out against the un-rotated page and tags the
    layer with the display rotation; spin it into place over the rotated canvas. */

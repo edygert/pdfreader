@@ -36,12 +36,16 @@ let gPending = false;
 let renderSeq = 0;
 let resizeJob = null;
 let uiMsgJob = null;
+let lastVW = 0; // viewport size the current page was last fit against — the
+let lastVH = 0; // ResizeObserver re-renders only when the box actually changes.
 
 // ---------- rendering & scaling ----------
 async function effectiveScale() {
   const [wpt, hpt] = await doc.pageSize(page, record.rotation || 0);
   const vw = viewportEl.clientWidth;
   const vh = viewportEl.clientHeight;
+  lastVW = vw; // remember what we fit against so the ResizeObserver can tell a
+  lastVH = vh; // real box change from a redundant callback.
   if (record.scaleMode === FIT_WIDTH) return Math.max(0.05, (vw - MARGIN) / wpt);
   if (record.scaleMode === FIT_HEIGHT) return Math.max(0.05, (vh - MARGIN) / hpt);
   return record.customFactor;
@@ -818,12 +822,27 @@ async function init() {
     if (f) openFile(f, null);
     fileInput.value = "";
   });
-  window.addEventListener("resize", () => {
+  // Re-fit whenever the viewport box actually changes size. This covers window
+  // resizes and device rotation, but also the case that made pages open
+  // "shortened": the viewport can report a transient smaller height right after
+  // a file opens (layout not yet settled, or the mobile browser's address bar
+  // still animating), so the one-shot measurement in effectiveScale() fits the
+  // page too short. Observing the box means whatever height it finally settles
+  // to, the page re-fits to it — no reliance on a resize event that never fires
+  // for the open-timing case. Guarded by lastV* so redundant callbacks (the
+  // observer fires once on observe, and after every render) don't re-render.
+  const onViewportResize = () => {
     if (!doc) return;
     if (record.scaleMode !== FIT_WIDTH && record.scaleMode !== FIT_HEIGHT) return;
+    if (viewportEl.clientWidth === lastVW && viewportEl.clientHeight === lastVH) return;
     clearTimeout(resizeJob);
     resizeJob = setTimeout(renderCurrent, 80);
-  });
+  };
+  if (window.ResizeObserver) {
+    new ResizeObserver(onViewportResize).observe(viewportEl);
+  } else {
+    window.addEventListener("resize", onViewportResize);
+  }
   helpEl.addEventListener("click", hideHelp);
   tocEl.addEventListener("click", (e) => {
     if (e.target === tocEl) hideToc(); // click the backdrop (not a row) to close
