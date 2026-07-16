@@ -13,3 +13,4 @@ __pycache__/
 
 # Deploy artifact (zip of web/ for static-host drag-drop)
 /web.zip
+testdocs/
