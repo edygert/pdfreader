@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  Landing page for the apps host (the apps host).
+  Landing page for the apps host.
   Lives at the S3 bucket root; each app is served from its own /<name>/ prefix.
   Deploy:  aws s3 cp apps-root/index.html s3://<bucket>/index.html \
              --content-type text/html --cache-control no-cache
@@ -44,7 +44,8 @@
   <body>
     <main>
       <h1>Apps</h1>
-      <p class="sub">the apps host</p>
+      <!-- Host shown at runtime (not hardcoded) so the source carries no domain. -->
+      <p class="sub" id="host"></p>
       <ul>
         <li>
           <a class="app" href="/pdfreader/">
@@ -59,5 +60,11 @@
       </ul>
       <footer>© Dygert Consulting</footer>
     </main>
+    <script>
+      // Fill the subtitle from the current host (drop a leading "apps." label),
+      // so the deployed page still shows its domain without the source hardcoding it.
+      document.getElementById("host").textContent =
+        location.hostname.replace(/^apps\./, "") || location.hostname;
+    </script>
   </body>
 </html>
