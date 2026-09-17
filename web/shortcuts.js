@@ -6,8 +6,8 @@ export const SHORTCUTS = [
   ["Recent files", ["Shift O"]],
   ["Go to page", [":"]],
   ["Table of contents", ["c"]],
-  ["Next page", ["Ctrl f", "Ctrl →", "Space", "PageDown"]],
-  ["Previous page", ["Ctrl b", "Ctrl ←", "PageUp"]],
+  ["Next page", ["→", "Ctrl f", "Ctrl →", "Space", "PageDown"]],
+  ["Previous page", ["←", "Ctrl b", "Ctrl ←", "PageUp"]],
   ["First page", ["gg", "Home"]],
   ["Last page", ["G", "End"]],
   ["Zoom in", ["+", "="]],
@@ -18,7 +18,7 @@ export const SHORTCUTS = [
   ["Rotate clockwise / counter", ["r", "Shift r"]],
   ["Page color: white / off-white / dark", ["t"]],
   ["UI text bigger / smaller / reset", ["Ctrl +", "Ctrl -", "Ctrl 0"]],
-  ["Pan (when zoomed)", ["h j k l", "← → ↑ ↓"]],
+  ["Pan (when zoomed)", ["h j k l", "↑ ↓"]],
   ["Show this help", ["?", "F1"]],
   ["Close", ["q"]],
 ];
@@ -53,7 +53,7 @@ export function helpHTML() {
     <table>${rows}</table>
     <h2>Touch</h2>
     <table>${touchRows}</table>
-    <p class="dim">Arrow keys / hjkl pan when the page is zoomed past the window.
+    <p class="dim">← → turn pages; ↑ ↓ / hjkl pan when the page is zoomed past the window.
     Select text with the mouse; <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> <kbd>C</kbd> copies it.
     Press <kbd>?</kbd> or <kbd>Esc</kbd> to close.</p>
   </div>`;

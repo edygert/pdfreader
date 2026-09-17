@@ -568,8 +568,8 @@ function onKeyDown(e) {
     case "l": return done(e, () => panX(1));
     case "j": return done(e, () => panY(1));
     case "k": return done(e, () => panY(-1));
-    case "ArrowLeft": return done(e, () => panX(-1));
-    case "ArrowRight": return done(e, () => panX(1));
+    case "ArrowLeft": return done(e, prevPage);
+    case "ArrowRight": return done(e, nextPage);
     case "ArrowUp": return done(e, () => panY(-1));
     case "ArrowDown": return done(e, () => panY(1));
     case "?": return done(e, toggleHelp);
